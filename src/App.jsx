@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const App = () => {
   const [rules, setRules] = useState([]);
@@ -7,6 +8,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const rulesPerPage = 10;
+  const navigate = useNavigate();
 
   // Normalize varying API shapes into the fields the table expects
   const normalizeRules = (incoming) => {
@@ -145,6 +147,9 @@ const App = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Omschrijving
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Details
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -165,6 +170,15 @@ const App = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
                           {rule.omschrijving}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => navigate(`/rules/${rule.regelId}`)}
+                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150"
+                            title="Toon details"
+                          >
+                            Details
+                          </button>
                         </td>
                       </tr>
                     ))

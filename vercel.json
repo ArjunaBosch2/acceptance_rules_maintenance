@@ -8,6 +8,10 @@
   },
   "routes": [
     {
+      "src": "/api/acceptance-rules/(.*)",
+      "dest": "/api/acceptance-rules.py"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     }

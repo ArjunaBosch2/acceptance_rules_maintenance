@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import os
+from urllib.parse import urlparse
 
 # Cache bearer token between requests to reduce token calls
 token_cache = {"token": None, "expires_at": None}
@@ -72,6 +73,22 @@ def fetch_rules(token):
         return {"rules": rules, "count": len(rules)}
 
 
+def fetch_rule_detail(token, regel_id):
+    with httpx.Client() as client:
+        response = client.get(
+            f"{KINETIC_HOST}/beheer/api/v1/administratie/assurantie/regels/acceptatieregels/{regel_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -85,7 +102,19 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             token = get_bearer_token()
-            data = fetch_rules(token)
+            parsed = urlparse(self.path)
+            parts = [p for p in parsed.path.split("/") if p]
+
+            # Expecting /api/acceptance-rules/<regelId>?...
+            regel_id = None
+            if len(parts) >= 3 and parts[0] == "api" and parts[1] == "acceptance-rules":
+                regel_id = parts[2] if len(parts) >= 3 and parts[2] else None
+
+            if regel_id:
+                data = fetch_rule_detail(token, regel_id)
+            else:
+                data = fetch_rules(token)
+
             self._send_json(data, status_code=200)
         except httpx.HTTPStatusError as exc:
             detail = {
