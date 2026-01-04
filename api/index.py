@@ -15,8 +15,8 @@ app.add_middleware(
 )
 
 KINETIC_HOST = "https://kinetic.private-insurance.eu"
-CLIENT_ID = os.getenv("client_id")
-CLIENT_SECRET = os.getenv("client_secret")
+CLIENT_ID = os.getenv("KINETIC_CLIENT_ID")
+CLIENT_SECRET = os.getenv("KINETIC_CLIENT_SECRET")
 
 token_cache = {"token": None, "expires_at": None}
 
