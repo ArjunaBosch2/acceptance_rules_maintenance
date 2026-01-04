@@ -4,7 +4,7 @@ export default function App() {
   const [records, setRecords] = useState([]);
 
   useEffect(() => {
-    fetch("/api/records?active=true")
+    fetch("/api/acceptance-rules")
       .then((r) => r.json())
       .then(setRecords)
       .catch(console.error);
