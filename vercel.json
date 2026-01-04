@@ -1,6 +1,7 @@
 {
-  "routes": [
-    { "src": "/api/health", "dest": "/api/health.py" },
-    { "src": "/api/acceptance-rules", "dest": "/api/acceptance-rules.py" }
-  ]
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.9"
+    }
+  }
 }
