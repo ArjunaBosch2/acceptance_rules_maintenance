@@ -8,6 +8,28 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rulesPerPage = 10;
 
+  // Normalize varying API shapes into the fields the table expects
+  const normalizeRules = (incoming) => {
+    if (!incoming) return [];
+
+    const flatten = (items) =>
+      items.flatMap((item) => {
+        if (!item) return [];
+        if (Array.isArray(item)) return flatten(item);
+        if (Array.isArray(item.Data)) return flatten(item.Data);
+
+        return [
+          {
+            regelId: item.regelId ?? item.RegelId ?? item.id ?? "",
+            externNummer: item.externNummer ?? item.ExternNummer ?? "",
+            omschrijving: item.omschrijving ?? item.Omschrijving ?? "",
+          },
+        ];
+      });
+
+    return flatten(Array.isArray(incoming) ? incoming : [incoming]);
+  };
+
   const fetchRules = async () => {
     setLoading(true);
     setError(null);
@@ -20,7 +42,9 @@ const App = () => {
       }
       
       const data = await response.json();
-      setRules(data.rules || []);
+      // Support multiple shapes: {rules: [...]}, {data: [...]}, or direct array/object
+      const normalized = normalizeRules(data.rules || data.data || data);
+      setRules(normalized);
     } catch (err) {
       setError(err.message);
       // Demo data for illustration when API fails
