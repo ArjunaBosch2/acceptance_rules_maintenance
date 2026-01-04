@@ -1,1 +1,0 @@
-# acceptance_rules_maintenance
