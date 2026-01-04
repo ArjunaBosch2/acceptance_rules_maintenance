@@ -48,7 +48,13 @@ def fetch_rules(token):
     with httpx.Client() as client:
         response = client.get(
             f"{KINETIC_HOST}/beheer/api/v1/administratie/assurantie/regels/acceptatieregels",
-            headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                # Required tenant/company headers for DIAS API
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
             timeout=30.0,
         )
         response.raise_for_status()
