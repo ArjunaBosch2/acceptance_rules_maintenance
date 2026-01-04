@@ -1,24 +1,15 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import os
 from datetime import datetime, timedelta
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Token cache
+token_cache = {"token": None, "expires_at": None}
 
 KINETIC_HOST = "https://kinetic.private-insurance.eu"
 CLIENT_ID = os.getenv("KINETIC_CLIENT_ID")
 CLIENT_SECRET = os.getenv("KINETIC_CLIENT_SECRET")
-
-token_cache = {"token": None, "expires_at": None}
 
 
 async def get_bearer_token():
@@ -52,8 +43,7 @@ async def get_bearer_token():
             )
 
 
-@app.get("/api/acceptance-rules")
-async def get_acceptance_rules():
+async def handler(request):
     try:
         token = await get_bearer_token()
 
@@ -82,12 +72,5 @@ async def get_acceptance_rules():
 
             return {"rules": rules, "count": len(rules)}
 
-    except httpx.HTTPError as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to fetch acceptance rules: {str(e)}"
-        )
-
-
-@app.get("/api/health")
-async def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
