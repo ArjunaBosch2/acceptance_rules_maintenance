@@ -355,7 +355,7 @@ const App = () => {
                       Details
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Verwijder
+                      Aanpassen
                     </th>
                   </tr>
                 </thead>
@@ -597,7 +597,7 @@ const App = () => {
             <form onSubmit={handleEditSubmit} className="px-5 py-4 space-y-4">
               <div>
                 <label className="text-sm font-medium text-gray-700" htmlFor="edit-expressie">
-                  Xpath expressie
+                  Aangepaste Xpath expressie
                 </label>
                 <textarea
                   id="edit-expressie"
