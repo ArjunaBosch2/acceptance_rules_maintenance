@@ -42,6 +42,13 @@ const ProductRules = () => {
 
   useEffect(() => {
     fetchRules();
+    const handleEnvChange = () => {
+      if (productId) {
+        fetchRules();
+      }
+    };
+    window.addEventListener('apiEnvChange', handleEnvChange);
+    return () => window.removeEventListener('apiEnvChange', handleEnvChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 

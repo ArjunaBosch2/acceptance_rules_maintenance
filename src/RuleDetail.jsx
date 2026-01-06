@@ -35,6 +35,13 @@ const RuleDetail = () => {
     };
 
     if (regelId) fetchDetail();
+    const handleEnvChange = () => {
+      if (regelId) {
+        fetchDetail();
+      }
+    };
+    window.addEventListener('apiEnvChange', handleEnvChange);
+    return () => window.removeEventListener('apiEnvChange', handleEnvChange);
   }, [regelId]);
 
   return (

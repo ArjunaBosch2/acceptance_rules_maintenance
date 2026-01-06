@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
-import { getApiEnv, setApiEnv, withApiEnv } from './apiEnv';
+import { withApiEnv } from './apiEnv';
 
 const App = () => {
   const [rules, setRules] = useState([]);
@@ -10,7 +10,6 @@ const App = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [apiEnv, setApiEnvState] = useState(getApiEnv());
   const rulesPerPage = 10;
   const navigate = useNavigate();
 
@@ -36,12 +35,12 @@ const App = () => {
     return flatten(Array.isArray(incoming) ? incoming : [incoming]);
   };
 
-  const fetchRules = async (envOverride = apiEnv) => {
+  const fetchRules = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(withApiEnv('/api/acceptance-rules', envOverride));
+      const response = await fetch(withApiEnv('/api/acceptance-rules'));
 
       if (!response.ok) {
         throw new Error('Failed to fetch acceptance rules');
@@ -78,6 +77,12 @@ const App = () => {
 
   useEffect(() => {
     fetchRules();
+    const handleEnvChange = () => {
+      setCurrentPage(1);
+      fetchRules();
+    };
+    window.addEventListener('apiEnvChange', handleEnvChange);
+    return () => window.removeEventListener('apiEnvChange', handleEnvChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -98,14 +103,6 @@ const App = () => {
   const handleRefresh = () => {
     setCurrentPage(1);
     fetchRules();
-  };
-
-  const handleEnvChange = (event) => {
-    const nextEnv = event.target.value;
-    setApiEnvState(nextEnv);
-    setApiEnv(nextEnv);
-    setCurrentPage(1);
-    fetchRules(nextEnv);
   };
 
   const handleSearchChange = (e) => {
@@ -129,20 +126,6 @@ const App = () => {
                 </p>
               </div>
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
-                <div className="flex flex-col">
-                  <label className="text-xs font-medium text-gray-600 mb-1" htmlFor="api-env">
-                    Omgeving
-                  </label>
-                  <select
-                    id="api-env"
-                    value={apiEnv}
-                    onChange={handleEnvChange}
-                    className="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                  >
-                    <option value="production">Productie</option>
-                    <option value="acceptance">Acceptatie</option>
-                  </select>
-                </div>
                 <input
                   type="text"
                   value={searchTerm}

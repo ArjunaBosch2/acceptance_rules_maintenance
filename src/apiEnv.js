@@ -6,6 +6,7 @@ export const getApiEnv = () => {
 export const setApiEnv = (env) => {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem('apiEnv', env);
+    window.dispatchEvent(new CustomEvent('apiEnvChange', { detail: env }));
   }
 };
 

@@ -67,6 +67,11 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
+    const handleEnvChange = () => {
+      fetchProducts();
+    };
+    window.addEventListener('apiEnvChange', handleEnvChange);
+    return () => window.removeEventListener('apiEnvChange', handleEnvChange);
   }, []);
 
   const filteredProducts = products.filter((product) => {
