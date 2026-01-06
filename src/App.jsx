@@ -11,6 +11,8 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [deletableRules, setDeletableRules] = useState({});
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   const rulesPerPage = 10;
   const navigate = useNavigate();
 
@@ -79,6 +81,7 @@ const App = () => {
   useEffect(() => {
     fetchRules();
     const handleEnvChange = () => {
+      setDeletableRules({});
       setCurrentPage(1);
       fetchRules();
     };
@@ -106,6 +109,30 @@ const App = () => {
     fetchRules();
   };
 
+  const fetchHerkomstForRule = async (regelId) => {
+    if (!regelId) return null;
+    try {
+      const response = await fetch(
+        withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`),
+        {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-store' },
+        }
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+      return (
+        data?.Herkomst ??
+        data?.herkomst ??
+        data?.Data?.Herkomst ??
+        data?.Data?.herkomst ??
+        null
+      );
+    } catch (err) {
+      return null;
+    }
+  };
+
   const handleDelete = async (regelId) => {
     if (!regelId) return;
     setDeletingId(regelId);
@@ -129,6 +156,12 @@ const App = () => {
         throw new Error(message);
       }
       setRules((prev) => prev.filter((rule) => rule.regelId !== regelId));
+      setDeletableRules((prev) => {
+        const next = { ...prev };
+        delete next[regelId];
+        return next;
+      });
+      setShowDeleteSuccess(true);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -140,6 +173,31 @@ const App = () => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    if (currentRules.length === 0) return;
+    let isCancelled = false;
+    const pending = currentRules.filter(
+      (rule) => rule.regelId && deletableRules[rule.regelId] === undefined
+    );
+    if (pending.length === 0) return;
+
+    const loadDeletable = async () => {
+      const updates = {};
+      for (const rule of pending) {
+        const herkomst = await fetchHerkomstForRule(rule.regelId);
+        updates[rule.regelId] = herkomst === 'Tp';
+      }
+      if (!isCancelled && Object.keys(updates).length > 0) {
+        setDeletableRules((prev) => ({ ...prev, ...updates }));
+      }
+    };
+
+    loadDeletable();
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentRules, deletableRules]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -181,11 +239,9 @@ const App = () => {
               <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-yellow-800 font-medium">
-                  API verbinding niet beschikbaar
+                  Actie mislukt
                 </p>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Demo data wordt getoond. Configureer de backend API voor live data.
-                </p>
+                <p className="text-xs text-yellow-700 mt-1">{error}</p>
               </div>
             </div>
           )}
@@ -250,15 +306,19 @@ const App = () => {
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => handleDelete(rule.regelId)}
-                            disabled={deletingId === rule.regelId}
-                            className="p-2 rounded-md border border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Verwijder acceptatieregel"
-                            aria-label={`Verwijder acceptatieregel ${rule.regelId}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          {deletableRules[rule.regelId] ? (
+                            <button
+                              onClick={() => handleDelete(rule.regelId)}
+                              disabled={deletingId === rule.regelId}
+                              className="p-2 rounded-md border border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Verwijder acceptatieregel"
+                              aria-label={`Verwijder acceptatieregel ${rule.regelId}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
                         </td>
                       </tr>
                     ))
@@ -323,6 +383,33 @@ const App = () => {
           )}
         </div>
       </div>
+      {showDeleteSuccess && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-sm border border-gray-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+              <p className="text-sm font-medium text-gray-900">Melding</p>
+              <button
+                onClick={() => setShowDeleteSuccess(false)}
+                className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Sluit melding"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-4 py-5 text-sm text-gray-700">
+              Acceptatieregel succesvol verwijderd
+            </div>
+            <div className="px-4 py-3 flex justify-end">
+              <button
+                onClick={() => setShowDeleteSuccess(false)}
+                className="px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-md border border-blue-100"
+              >
+                Sluiten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -119,7 +119,7 @@ def fetch_rule_detail(token, host, regel_id):
 def delete_rule(token, host, regel_id):
     with httpx.Client() as client:
         response = client.delete(
-            f"{host}/api/v1/administratie/assurantie/regels/acceptatieregels/{regel_id}",
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/acceptatieregels/{regel_id}",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json",
