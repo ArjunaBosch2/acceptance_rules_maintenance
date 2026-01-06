@@ -11,6 +11,9 @@ const RuleDetail = () => {
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [explainLoading, setExplainLoading] = useState(false);
+  const [explainError, setExplainError] = useState(null);
+  const [explanation, setExplanation] = useState('');
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -28,6 +31,8 @@ const RuleDetail = () => {
         // The API returns a single rule object, but normalize just in case
         const rule = Array.isArray(data) ? data[0] : data;
         setDetail(rule);
+        setExplanation('');
+        setExplainError(null);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -44,6 +49,40 @@ const RuleDetail = () => {
     window.addEventListener('apiEnvChange', handleEnvChange);
     return () => window.removeEventListener('apiEnvChange', handleEnvChange);
   }, [regelId]);
+
+  const handleExplain = async () => {
+    const expression = detail?.Expressie || detail?.expressie;
+    if (!expression) return;
+    setExplainLoading(true);
+    setExplainError(null);
+    setExplanation('');
+    try {
+      const response = await fetch('/api/explain-rule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify({ expression }),
+      });
+      if (!response.ok) {
+        let message = `Failed to explain rule (status ${response.status})`;
+        try {
+          const payload = await response.json();
+          message = payload.message || payload.error || message;
+        } catch (err) {
+          // ignore JSON parse failure
+        }
+        throw new Error(message);
+      }
+      const data = await response.json();
+      setExplanation(data.explanation || '');
+    } catch (err) {
+      setExplainError(err.message);
+    } finally {
+      setExplainLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
@@ -84,6 +123,25 @@ const RuleDetail = () => {
                 <dd className="text-lg text-gray-900 whitespace-pre-wrap dark:text-slate-100">
                   {detail.Expressie || detail.expressie || '-'}
                 </dd>
+                <div className="mt-4 flex items-center gap-3">
+                  <button
+                    onClick={handleExplain}
+                    disabled={explainLoading}
+                    className="px-4 py-2 text-sm font-medium text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed neon-primary"
+                  >
+                    {explainLoading ? 'Uitleg ophalen...' : 'Wat doet deze acceptatieregel?'}
+                  </button>
+                </div>
+                {explainError && (
+                  <p className="mt-3 text-sm text-red-400">
+                    {explainError}
+                  </p>
+                )}
+                {explanation && (
+                  <div className="mt-4 rounded-lg border border-purple-500/30 bg-purple-900/20 p-4 text-sm text-slate-100">
+                    {explanation}
+                  </div>
+                )}
               </div>
             </dl>
           ) : (
