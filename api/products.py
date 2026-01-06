@@ -59,6 +59,8 @@ def fetch_products(token):
         "Accept": "application/json",
         "Tenant-CustomerId": "30439",
         "BedrijfId": "1",
+        "MedewerkerId": "1",
+        "KantoorId": "1",
       },
       timeout=30.0,
     )
