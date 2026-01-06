@@ -13,7 +13,7 @@ const RuleDetail = () => {
   const [error, setError] = useState(null);
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState(null);
-  const [explanation, setExplanation] = useState('');
+  const [explanation, setExplanation] = useState({ bullets: [], summary: '' });
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -31,7 +31,7 @@ const RuleDetail = () => {
         // The API returns a single rule object, but normalize just in case
         const rule = Array.isArray(data) ? data[0] : data;
         setDetail(rule);
-        setExplanation('');
+        setExplanation({ bullets: [], summary: '' });
         setExplainError(null);
       } catch (err) {
         setError(err.message);
@@ -55,7 +55,7 @@ const RuleDetail = () => {
     if (!expression) return;
     setExplainLoading(true);
     setExplainError(null);
-    setExplanation('');
+    setExplanation({ bullets: [], summary: '' });
     try {
       const response = await fetch('/api/explain-rule', {
         method: 'POST',
@@ -76,7 +76,12 @@ const RuleDetail = () => {
         throw new Error(message);
       }
       const data = await response.json();
-      setExplanation(data.explanation || '');
+      const raw = (data.explanation || '').trim();
+      const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const bullets = lines.filter((line) => line.startsWith('- ')).map((line) => line.slice(2));
+      const summaryLine = lines.find((line) => line.toLowerCase().startsWith('samenvatting:'));
+      const summary = summaryLine ? summaryLine.replace(/^samenvatting:\s*/i, '') : '';
+      setExplanation({ bullets, summary });
     } catch (err) {
       setExplainError(err.message);
     } finally {
@@ -137,9 +142,20 @@ const RuleDetail = () => {
                     {explainError}
                   </p>
                 )}
-                {explanation && (
+                {(explanation.bullets.length > 0 || explanation.summary) && (
                   <div className="mt-4 rounded-lg border border-purple-500/30 bg-purple-900/20 p-4 text-sm text-slate-100">
-                    {explanation}
+                    {explanation.bullets.length > 0 && (
+                      <ul className="space-y-2 list-disc pl-5">
+                        {explanation.bullets.map((item, index) => (
+                          <li key={`${item}-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {explanation.summary && (
+                      <p className="mt-3 text-sm text-slate-200">
+                        Samenvatting: {explanation.summary}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

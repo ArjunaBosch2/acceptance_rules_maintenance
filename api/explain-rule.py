@@ -13,8 +13,12 @@ OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "350"))
 
 def build_prompt(expression):
     return (
-        "You are a Xpath expression interpreter. Explain step by step in clear Dutch "
-        "what this Xpath expression does functionally:\n"
+        "You are a Xpath expression interpreter. Answer in Dutch.\n"
+        "Return exactly:\n"
+        "- 3 to 5 bullet points, each a short sentence starting with '- '.\n"
+        "Then one short summary sentence starting with 'Samenvatting:'.\n"
+        "Do not add extra text.\n"
+        "Xpath expression:\n"
         f"{expression}"
     )
 
