@@ -96,7 +96,7 @@ const Products = () => {
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Producten</h1>
                 <p className="text-sm text-gray-600 mt-1 dark:text-slate-300">
-                  Overzicht van beschikbare verzekeringsproducten
+                  Overzicht van beschikbare verzekeringsproducten. Via de Bekijk knop zie je de gekoppelde Acceptatieregels.
                 </p>
               </div>
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
