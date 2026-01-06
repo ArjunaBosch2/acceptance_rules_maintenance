@@ -46,8 +46,8 @@ def get_bearer_token():
 
 
 def fetch_products(token):
-  with httpx.Client() as client:
-    response = client.get(
+    with httpx.Client() as client:
+        response = client.get(
             f"{KINETIC_HOST}/contract/api/v1/contracten/verzekeringen/productdefinities",
             params={
                 "AlleenLopendProduct": "<false>",
@@ -74,58 +74,58 @@ def fetch_products(token):
             return data["data"]
         if isinstance(data, dict) and "items" in data:
             return data["items"]
-    return [data] if data else []
+        return [data] if data else []
 
 
 def fetch_product_detail(token, product_id):
-  with httpx.Client() as client:
-    response = client.get(
-      f"{KINETIC_HOST}/contract/api/v1/contracten/verzekeringen/productdefinities/{product_id}",
-      headers={
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json",
-        "Tenant-CustomerId": "30439",
-        "BedrijfId": "1",
-        "MedewerkerId": "1",
-        "KantoorId": "1",
-      },
-      timeout=30.0,
-    )
-    response.raise_for_status()
-    return response.json()
+    with httpx.Client() as client:
+        response = client.get(
+            f"{KINETIC_HOST}/contract/api/v1/contracten/verzekeringen/productdefinities/{product_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+                "MedewerkerId": "1",
+                "KantoorId": "1",
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 class handler(BaseHTTPRequestHandler):
-  def _send_json(self, payload, status_code=200):
-    body = json.dumps(payload).encode()
-    self.send_response(status_code)
-    self.send_header("Content-Type", "application/json")
-    self.send_header("Content-Length", str(len(body)))
-    self.send_header("Cache-Control", "no-store")
-    self.send_header("Access-Control-Allow-Origin", "*")
-    self.end_headers()
-    self.wfile.write(body)
+    def _send_json(self, payload, status_code=200):
+        body = json.dumps(payload).encode()
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
-  def do_GET(self):
-    try:
-      token = get_bearer_token()
-      parsed = urlparse(self.path)
-      parts = [p for p in parsed.path.split("/") if p]
+    def do_GET(self):
+        try:
+            token = get_bearer_token()
+            parsed = urlparse(self.path)
+            parts = [p for p in parsed.path.split("/") if p]
 
-      # Expecting /api/products/<productId>?...
-      product_id = None
-      if len(parts) >= 3 and parts[0] == "api" and parts[1] == "products":
-        product_id = parts[2] if len(parts) >= 3 and parts[2] else None
+            # Expecting /api/products/<productId>?...
+            product_id = None
+            if len(parts) >= 3 and parts[0] == "api" and parts[1] == "products":
+                product_id = parts[2] if len(parts) >= 3 and parts[2] else None
 
-      if product_id:
-        data = fetch_product_detail(token, product_id)
-        self._send_json(data, status_code=200)
-      else:
-        data = fetch_products(token)
-        self._send_json({"products": data, "count": len(data)}, status_code=200)
-    except httpx.HTTPStatusError as exc:
-      detail = {
-        "error": "Upstream request failed",
+            if product_id:
+                data = fetch_product_detail(token, product_id)
+                self._send_json(data, status_code=200)
+            else:
+                data = fetch_products(token)
+                self._send_json({"products": data, "count": len(data)}, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
                 "status_code": exc.response.status_code,
                 "message": exc.response.text,
             }
