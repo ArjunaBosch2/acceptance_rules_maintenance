@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
+import { withApiEnv } from './apiEnv';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -41,7 +42,7 @@ const Products = () => {
     setError(null);
 
     try {
-      const res = await fetch('/api/products', {
+      const res = await fetch(withApiEnv('/api/products'), {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-store' },
       });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import TopNav from './TopNav';
+import { withApiEnv } from './apiEnv';
 
 const RuleDetail = () => {
   const { regelId } = useParams();
@@ -15,7 +16,7 @@ const RuleDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`, {
+        const res = await fetch(withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`), {
           cache: 'no-store',
           headers: { 'Cache-Control': 'no-store' },
         });

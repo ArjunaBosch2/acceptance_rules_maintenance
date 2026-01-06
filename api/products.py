@@ -6,26 +6,53 @@ import os
 from urllib.parse import parse_qs, urlparse
 
 # Cache bearer token between requests to reduce token calls
-token_cache = {"token": None, "expires_at": None}
+token_cache = {
+    "production": {"token": None, "expires_at": None},
+    "acceptance": {"token": None, "expires_at": None},
+}
 
-KINETIC_HOST = "https://kinetic.private-insurance.eu"
-CLIENT_ID = os.getenv("KINETIC_CLIENT_ID")
-CLIENT_SECRET = os.getenv("KINETIC_CLIENT_SECRET")
+DEFAULT_KINETIC_HOST = os.getenv("KINETIC_HOST", "https://kinetic.private-insurance.eu")
+DEFAULT_CLIENT_ID = os.getenv("KINETIC_CLIENT_ID")
+DEFAULT_CLIENT_SECRET = os.getenv("KINETIC_CLIENT_SECRET")
+ACCEPTANCE_KINETIC_HOST = os.getenv("KINETIC_HOST_ACCEPTANCE", DEFAULT_KINETIC_HOST)
+ACCEPTANCE_CLIENT_ID = os.getenv("KINETIC_CLIENT_ID_ACCEPTANCE", DEFAULT_CLIENT_ID)
+ACCEPTANCE_CLIENT_SECRET = os.getenv("KINETIC_CLIENT_SECRET_ACCEPTANCE", DEFAULT_CLIENT_SECRET)
 
 
-def get_bearer_token():
+def get_env_config(env_key):
+    if env_key == "acceptance":
+        return {
+            "host": ACCEPTANCE_KINETIC_HOST,
+            "client_id": ACCEPTANCE_CLIENT_ID,
+            "client_secret": ACCEPTANCE_CLIENT_SECRET,
+        }
+    return {
+        "host": DEFAULT_KINETIC_HOST,
+        "client_id": DEFAULT_CLIENT_ID,
+        "client_secret": DEFAULT_CLIENT_SECRET,
+    }
+
+
+def get_bearer_token(env_key="production"):
     # Reuse token if it is still valid
-    if token_cache["token"] and token_cache["expires_at"]:
-        if datetime.now() < token_cache["expires_at"]:
-            return token_cache["token"]
+    cache = token_cache.get(env_key, token_cache["production"])
+    if cache["token"] and cache["expires_at"]:
+        if datetime.now() < cache["expires_at"]:
+            return cache["token"]
 
-    if not CLIENT_ID or not CLIENT_SECRET:
-        raise RuntimeError("KINETIC_CLIENT_ID or KINETIC_CLIENT_SECRET is not set")
+    config = get_env_config(env_key)
+    if not config["client_id"] or not config["client_secret"]:
+        raise RuntimeError(
+            f"KINETIC_CLIENT_ID or KINETIC_CLIENT_SECRET is not set for {env_key}"
+        )
 
     with httpx.Client() as client:
         response = client.post(
-            f"{KINETIC_HOST}/token",
-            params={"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET},
+            f"{config['host']}/token",
+            params={
+                "client_id": config["client_id"],
+                "client_secret": config["client_secret"],
+            },
             timeout=30.0,
         )
         response.raise_for_status()
@@ -38,17 +65,17 @@ def get_bearer_token():
             raise RuntimeError("Bearer token missing from token response")
 
         # Refresh 5 minutes before expiry
-        token_cache["token"] = token
-        token_cache["expires_at"] = datetime.now() + timedelta(
+        cache["token"] = token
+        cache["expires_at"] = datetime.now() + timedelta(
             seconds=max(expires_in - 300, 60)
         )
         return token
 
 
-def fetch_products(token):
+def fetch_products(token, host):
     with httpx.Client() as client:
         response = client.get(
-            f"{KINETIC_HOST}/contract/api/v1/contracten/verzekeringen/productdefinities",
+            f"{host}/contract/api/v1/contracten/verzekeringen/productdefinities",
             params={
                 "AlleenLopendProduct": "<false>",
                 "IsBeschikbaarVoorAgent": "<true>",
@@ -77,10 +104,10 @@ def fetch_products(token):
         return [data] if data else []
 
 
-def fetch_product_detail(token, product_id):
+def fetch_product_detail(token, host, product_id):
     with httpx.Client() as client:
         response = client.get(
-            f"{KINETIC_HOST}/contract/api/v1/contracten/verzekeringen/productdefinities/{product_id}",
+            f"{host}/contract/api/v1/contracten/verzekeringen/productdefinities/{product_id}",
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/json",
@@ -108,22 +135,25 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            token = get_bearer_token()
             parsed = urlparse(self.path)
             parts = [p for p in parsed.path.split("/") if p]
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
 
             # Prefer /api/products?productId=<id>, but keep /api/products/<id> as fallback.
             product_id = None
-            query_params = parse_qs(parsed.query or "")
             product_id = query_params.get("productId", [None])[0]
             if not product_id and len(parts) >= 3 and parts[0] == "api" and parts[1] == "products":
                 product_id = parts[2] if len(parts) >= 3 and parts[2] else None
 
             if product_id:
-                data = fetch_product_detail(token, product_id)
+                data = fetch_product_detail(token, config["host"], product_id)
                 self._send_json(data, status_code=200)
             else:
-                data = fetch_products(token)
+                data = fetch_products(token, config["host"])
                 self._send_json({"products": data, "count": len(data)}, status_code=200)
         except httpx.HTTPStatusError as exc:
             detail = {

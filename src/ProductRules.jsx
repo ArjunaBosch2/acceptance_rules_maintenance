@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import TopNav from './TopNav';
+import { withApiEnv } from './apiEnv';
 
 const ProductRules = () => {
   const { productId } = useParams();
@@ -15,7 +16,7 @@ const ProductRules = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/products?productId=${encodeURIComponent(productId)}`, {
+      const res = await fetch(withApiEnv(`/api/products?productId=${encodeURIComponent(productId)}`), {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-store' },
       });
