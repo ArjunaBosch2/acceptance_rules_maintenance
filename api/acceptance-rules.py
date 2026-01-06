@@ -154,6 +154,25 @@ def create_rule(token, host, payload):
         return {"status": "created"}
 
 
+def update_rule(token, host, payload):
+    with httpx.Client() as client:
+        response = client.put(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/acceptatieregels/wijzigen",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            json=payload,
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "updated"}
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -242,19 +261,30 @@ class handler(BaseHTTPRequestHandler):
             afd_code = body.get("AfdBrancheCodeId")
             omschrijving = body.get("Omschrijving")
             expressie = body.get("Expressie")
+            regel_id = body.get("RegelId")
             resource_id = body.get("ResourceId") or str(uuid.uuid4())
 
-            if afd_code is None or omschrijving is None or expressie is None:
-                self._send_json({"error": "AfdBrancheCodeId, Omschrijving, and Expressie are required"}, status_code=400)
-                return
-
-            payload = {
-                "AfdBrancheCodeId": afd_code,
-                "Omschrijving": omschrijving,
-                "Expressie": expressie,
-                "ResourceId": resource_id,
-            }
-            data = create_rule(token, config["host"], payload)
+            if regel_id is not None:
+                if expressie is None:
+                    self._send_json({"error": "RegelId and Expressie are required"}, status_code=400)
+                    return
+                payload = {
+                    "RegelId": regel_id,
+                    "Expressie": expressie,
+                    "ResourceId": resource_id,
+                }
+                data = update_rule(token, config["host"], payload)
+            else:
+                if afd_code is None or omschrijving is None or expressie is None:
+                    self._send_json({"error": "AfdBrancheCodeId, Omschrijving, and Expressie are required"}, status_code=400)
+                    return
+                payload = {
+                    "AfdBrancheCodeId": afd_code,
+                    "Omschrijving": omschrijving,
+                    "Expressie": expressie,
+                    "ResourceId": resource_id,
+                }
+                data = create_rule(token, config["host"], payload)
             self._send_json(data, status_code=200)
         except httpx.HTTPStatusError as exc:
             detail = {

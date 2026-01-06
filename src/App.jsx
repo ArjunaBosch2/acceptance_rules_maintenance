@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
@@ -11,9 +11,7 @@ const App = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState(null);
-  const [deletableRules, setDeletableRules] = useState({});
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
-  const [sortDeletableFirst, setSortDeletableFirst] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
     omschrijving: '',
@@ -22,6 +20,11 @@ const App = () => {
   });
   const [createError, setCreateError] = useState(null);
   const [createSubmitting, setCreateSubmitting] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editRuleId, setEditRuleId] = useState(null);
+  const [editExpressie, setEditExpressie] = useState('');
+  const [editError, setEditError] = useState(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const rulesPerPage = 10;
   const navigate = useNavigate();
 
@@ -90,7 +93,6 @@ const App = () => {
   useEffect(() => {
     fetchRules();
     const handleEnvChange = () => {
-      setDeletableRules({});
       setCurrentPage(1);
       fetchRules();
     };
@@ -103,20 +105,11 @@ const App = () => {
     rule.regelId?.toString().toLowerCase().includes(searchTerm.trim().toLowerCase())
   );
 
-  const sortedRules = sortDeletableFirst
-    ? [...filteredRules].sort((a, b) => {
-      const aDel = deletableRules[a.regelId] === true;
-      const bDel = deletableRules[b.regelId] === true;
-      if (aDel === bDel) return 0;
-      return aDel ? -1 : 1;
-    })
-    : filteredRules;
-
-  const totalPages = Math.max(1, Math.ceil(sortedRules.length / rulesPerPage));
+  const totalPages = Math.max(1, Math.ceil(filteredRules.length / rulesPerPage));
   const safePage = Math.min(currentPage, totalPages);
   const indexOfLastRule = safePage * rulesPerPage;
   const indexOfFirstRule = indexOfLastRule - rulesPerPage;
-  const currentRules = sortedRules.slice(indexOfFirstRule, indexOfLastRule);
+  const currentRules = filteredRules.slice(indexOfFirstRule, indexOfLastRule);
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
@@ -125,30 +118,6 @@ const App = () => {
   const handleRefresh = () => {
     setCurrentPage(1);
     fetchRules();
-  };
-
-  const fetchHerkomstForRule = async (regelId) => {
-    if (!regelId) return null;
-    try {
-      const response = await fetch(
-        withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`),
-        {
-          cache: 'no-store',
-          headers: { 'Cache-Control': 'no-store' },
-        }
-      );
-      if (!response.ok) return null;
-      const data = await response.json();
-      return (
-        data?.Herkomst ??
-        data?.herkomst ??
-        data?.Data?.Herkomst ??
-        data?.Data?.herkomst ??
-        null
-      );
-    } catch (err) {
-      return null;
-    }
   };
 
   const handleDelete = async (regelId) => {
@@ -174,11 +143,6 @@ const App = () => {
         throw new Error(message);
       }
       setRules((prev) => prev.filter((rule) => rule.regelId !== regelId));
-      setDeletableRules((prev) => {
-        const next = { ...prev };
-        delete next[regelId];
-        return next;
-      });
       setShowDeleteSuccess(true);
     } catch (err) {
       setError(err.message);
@@ -192,34 +156,64 @@ const App = () => {
     setCurrentPage(1);
   };
 
-  useEffect(() => {
-    const rulesToCheck = sortDeletableFirst ? filteredRules : currentRules;
-    if (rulesToCheck.length === 0) return;
-    let isCancelled = false;
-    const pending = rulesToCheck.filter(
-      (rule) => rule.regelId && deletableRules[rule.regelId] === undefined
-    );
-    if (pending.length === 0) return;
-
-    const loadDeletable = async () => {
-      const updates = {};
-      for (const rule of pending) {
-        const herkomst = await fetchHerkomstForRule(rule.regelId);
-        updates[rule.regelId] = herkomst === 'Tp';
-      }
-      if (!isCancelled && Object.keys(updates).length > 0) {
-        setDeletableRules((prev) => ({ ...prev, ...updates }));
-      }
-    };
-
-    loadDeletable();
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentRules, filteredRules, sortDeletableFirst, deletableRules]);
-
   const handleCreateInputChange = (field) => (event) => {
     setCreateForm((prev) => ({ ...prev, [field]: event.target.value }));
+  };
+
+  const openEditModal = (regelId, expressieValue) => {
+    setEditRuleId(regelId);
+    setEditExpressie(expressieValue || '');
+    setEditError(null);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (event) => {
+    event.preventDefault();
+    setEditError(null);
+    if (!editRuleId) {
+      setEditError('RegelId ontbreekt.');
+      return;
+    }
+    if (!editExpressie.trim()) {
+      setEditError('Xpath expressie is verplicht.');
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const resourceId = crypto?.randomUUID ? crypto.randomUUID() : undefined;
+      const payload = {
+        RegelId: editRuleId,
+        Expressie: editExpressie.trim(),
+        ResourceId: resourceId,
+      };
+      const response = await fetch(withApiEnv('/api/acceptance-rules'), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        let message = `Failed to update rule (status ${response.status})`;
+        try {
+          const payloadError = await response.json();
+          message = payloadError.message || payloadError.error || message;
+        } catch (err) {
+          // ignore JSON parse failure
+        }
+        throw new Error(message);
+      }
+      setShowEditModal(false);
+      setEditRuleId(null);
+      setEditExpressie('');
+      fetchRules();
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setEditSubmitting(false);
+    }
   };
 
   const handleCreateSubmit = async (event) => {
@@ -365,22 +359,6 @@ const App = () => {
                     </th>
                   </tr>
                 </thead>
-                <thead className="bg-white border-b border-gray-200">
-                  <tr>
-                    <th colSpan="5" className="px-6 py-2 text-right">
-                      <button
-                        onClick={() => setSortDeletableFirst((prev) => !prev)}
-                        className={`text-xs font-medium px-3 py-1.5 rounded-md border transition-colors ${
-                          sortDeletableFirst
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'text-blue-700 border-blue-200 hover:bg-blue-50'
-                        }`}
-                      >
-                        {sortDeletableFirst ? 'Verwijderbaar bovenaan' : 'Sorteer verwijderbaar'}
-                      </button>
-                    </th>
-                  </tr>
-                </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {currentRules.length === 0 ? (
                     <tr>
@@ -415,7 +393,7 @@ const App = () => {
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          {deletableRules[rule.regelId] ? (
+                          <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleDelete(rule.regelId)}
                               disabled={deletingId === rule.regelId}
@@ -425,9 +403,15 @@ const App = () => {
                             >
                               <X className="w-4 h-4" />
                             </button>
-                          ) : (
-                            <span className="text-xs text-gray-400">-</span>
-                          )}
+                            <button
+                              onClick={() => openEditModal(rule.regelId)}
+                              className="p-2 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+                              title="Bewerk acceptatieregel"
+                              aria-label={`Bewerk acceptatieregel ${rule.regelId}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -586,6 +570,59 @@ const App = () => {
                 <button
                   type="submit"
                   disabled={createSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  Opslaan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-lg border border-gray-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <p className="text-sm font-medium text-gray-900">
+                Bewerk acceptatieregel {editRuleId}
+              </p>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Sluit formulier"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="px-5 py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700" htmlFor="edit-expressie">
+                  Xpath expressie
+                </label>
+                <textarea
+                  id="edit-expressie"
+                  rows="5"
+                  value={editExpressie}
+                  onChange={(event) => setEditExpressie(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              {editError && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                  {editError}
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md border border-gray-200"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
                   className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                 >
                   Opslaan
