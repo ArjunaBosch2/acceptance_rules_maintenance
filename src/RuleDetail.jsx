@@ -132,8 +132,9 @@ const RuleDetail = () => {
                   <button
                     onClick={handleExplain}
                     disabled={explainLoading}
-                    className="px-4 py-2 text-sm font-medium text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed neon-primary"
+                    className="px-4 py-2 text-sm font-medium text-white rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed neon-primary flex items-center gap-2"
                   >
+                    <span aria-hidden="true">✨</span>
                     {explainLoading ? 'Uitleg ophalen...' : 'Wat doet deze acceptatieregel?'}
                   </button>
                 </div>
