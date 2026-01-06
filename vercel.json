@@ -6,26 +6,18 @@
       "memory": 1024
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/products",
-      "dest": "/api/products.py"
+      "source": "/api/products/:path*",
+      "destination": "/api/products.py"
     },
     {
-      "src": "/api/products/(.*)",
-      "dest": "/api/products.py"
+      "source": "/api/acceptance-rules/:path*",
+      "destination": "/api/acceptance-rules.py"
     },
     {
-      "src": "/api/acceptance-rules/(.*)",
-      "dest": "/api/acceptance-rules.py"
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/((?!api/)(?!.*\\..*).*)",
-      "dest": "/index.html"
+      "source": "/((?!api/)(?!.*\\..*).*)",
+      "destination": "/index.html"
     }
   ]
 }
