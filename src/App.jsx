@@ -319,14 +319,14 @@ const App = () => {
                 <button
                   onClick={handleRefresh}
                   disabled={loading}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors neon-primary"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors dark:bg-slate-800 dark:text-blue-300 dark:border-blue-500/40 dark:hover:bg-blue-900/30 neon-outline"
+                  className="flex items-center justify-center gap-2 px-4 py-2 text-white rounded-lg transition-colors neon-primary"
                 >
                   + Nieuwe regel
                 </button>

@@ -8,14 +8,14 @@ import os
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2")
+OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "350"))
 
 
 def build_prompt(expression):
     return (
-        "You are a Xpath expression interpreter. You are able to explain step by step "
-        "in clear language what a specific Xpatch expression is doing from a functional "
-        "perspective. The Xpath expression you need to interpret is "
-        f"{expression}. Explain what it does in the dutch language."
+        "You are a Xpath expression interpreter. Explain step by step in clear Dutch "
+        "what this Xpath expression does functionally:\n"
+        f"{expression}"
     )
 
 
@@ -81,6 +81,7 @@ class handler(BaseHTTPRequestHandler):
             payload = {
                 "model": OPENAI_MODEL,
                 "input": prompt,
+                "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
             }
             headers = {
                 "Authorization": f"Bearer {OPENAI_API_KEY}",
@@ -91,7 +92,7 @@ class handler(BaseHTTPRequestHandler):
                     f"{OPENAI_BASE_URL}/responses",
                     headers=headers,
                     json=payload,
-                    timeout=45.0,
+                    timeout=8.0,
                 )
                 response.raise_for_status()
                 data = response.json()
