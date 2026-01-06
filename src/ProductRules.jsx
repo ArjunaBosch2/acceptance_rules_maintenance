@@ -15,7 +15,7 @@ const ProductRules = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/products/${encodeURIComponent(productId)}`, {
+      const res = await fetch(`/api/products?productId=${encodeURIComponent(productId)}`, {
         cache: 'no-store',
         headers: { 'Cache-Control': 'no-store' },
       });

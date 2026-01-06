@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import os
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 # Cache bearer token between requests to reduce token calls
 token_cache = {"token": None, "expires_at": None}
@@ -112,9 +112,11 @@ class handler(BaseHTTPRequestHandler):
             parsed = urlparse(self.path)
             parts = [p for p in parsed.path.split("/") if p]
 
-            # Expecting /api/products/<productId>?...
+            # Prefer /api/products?productId=<id>, but keep /api/products/<id> as fallback.
             product_id = None
-            if len(parts) >= 3 and parts[0] == "api" and parts[1] == "products":
+            query_params = parse_qs(parsed.query or "")
+            product_id = query_params.get("productId", [None])[0]
+            if not product_id and len(parts) >= 3 and parts[0] == "api" and parts[1] == "products":
                 product_id = parts[2] if len(parts) >= 3 and parts[2] else None
 
             if product_id:
