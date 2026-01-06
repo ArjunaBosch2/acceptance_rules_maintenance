@@ -3,6 +3,7 @@ import { RefreshCw, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
+import { getAuthHeader } from './apiAuth';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -44,7 +45,7 @@ const Products = () => {
     try {
       const res = await fetch(withApiEnv('/api/products'), {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-store' },
+        headers: { 'Cache-Control': 'no-store', ...getAuthHeader() },
       });
       if (!res.ok) {
         throw new Error(`Failed to fetch productdefinitions (status ${res.status})`);

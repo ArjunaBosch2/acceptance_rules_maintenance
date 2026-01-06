@@ -3,6 +3,7 @@ import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X, Pencil } from 'lu
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
+import { getAuthHeader } from './apiAuth';
 
 const App = () => {
   const [rules, setRules] = useState([]);
@@ -56,7 +57,9 @@ const App = () => {
     setError(null);
 
     try {
-      const response = await fetch(withApiEnv('/api/acceptance-rules'));
+      const response = await fetch(withApiEnv('/api/acceptance-rules'), {
+        headers: { ...getAuthHeader() },
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch acceptance rules');
@@ -130,7 +133,7 @@ const App = () => {
         withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`),
         {
           method: 'DELETE',
-          headers: { 'Cache-Control': 'no-store' },
+          headers: { 'Cache-Control': 'no-store', ...getAuthHeader() },
         }
       );
       if (!response.ok) {
@@ -199,6 +202,7 @@ const App = () => {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
+          ...getAuthHeader(),
         },
         body: JSON.stringify(payload),
       });
@@ -264,6 +268,7 @@ const App = () => {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-store',
+          ...getAuthHeader(),
         },
         body: JSON.stringify(payload),
       });

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
+import { getAuthHeader } from './apiAuth';
 
 const ProductRules = () => {
   const { productId } = useParams();
@@ -18,7 +19,7 @@ const ProductRules = () => {
     try {
       const res = await fetch(withApiEnv(`/api/products?productId=${encodeURIComponent(productId)}`), {
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-store' },
+        headers: { 'Cache-Control': 'no-store', ...getAuthHeader() },
       });
       if (!res.ok) {
         throw new Error(`Failed to fetch product rules (status ${res.status})`);

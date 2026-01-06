@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
+import { getAuthHeader } from './apiAuth';
 
 const RuleDetail = () => {
   const { regelId } = useParams();
@@ -18,7 +19,7 @@ const RuleDetail = () => {
       try {
         const res = await fetch(withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`), {
           cache: 'no-store',
-          headers: { 'Cache-Control': 'no-store' },
+          headers: { 'Cache-Control': 'no-store', ...getAuthHeader() },
         });
         if (!res.ok) {
           throw new Error(`Failed to fetch details (status ${res.status})`);
