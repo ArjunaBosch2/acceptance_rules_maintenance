@@ -41,7 +41,10 @@ const Products = () => {
     setError(null);
 
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch('/api/products', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-store' },
+      });
       if (!res.ok) {
         throw new Error(`Failed to fetch productdefinitions (status ${res.status})`);
       }

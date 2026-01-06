@@ -15,7 +15,10 @@ const ProductRules = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/products/${encodeURIComponent(productId)}`);
+      const res = await fetch(`/api/products/${encodeURIComponent(productId)}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-store' },
+      });
       if (!res.ok) {
         throw new Error(`Failed to fetch product rules (status ${res.status})`);
       }
