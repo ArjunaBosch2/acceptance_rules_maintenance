@@ -15,7 +15,10 @@ const RuleDetail = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/acceptance-rules/${regelId}`);
+        const res = await fetch(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-store' },
+        });
         if (!res.ok) {
           throw new Error(`Failed to fetch details (status ${res.status})`);
         }

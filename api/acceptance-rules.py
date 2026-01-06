@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import os
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 # Cache bearer token between requests to reduce token calls
 token_cache = {"token": None, "expires_at": None}
@@ -105,9 +105,11 @@ class handler(BaseHTTPRequestHandler):
             parsed = urlparse(self.path)
             parts = [p for p in parsed.path.split("/") if p]
 
-            # Expecting /api/acceptance-rules/<regelId>?...
+            # Prefer /api/acceptance-rules?regelId=<id>, but keep /api/acceptance-rules/<id> as fallback.
             regel_id = None
-            if len(parts) >= 3 and parts[0] == "api" and parts[1] == "acceptance-rules":
+            query_params = parse_qs(parsed.query or "")
+            regel_id = query_params.get("regelId", [None])[0]
+            if not regel_id and len(parts) >= 3 and parts[0] == "api" and parts[1] == "acceptance-rules":
                 regel_id = parts[2] if len(parts) >= 3 and parts[2] else None
 
             if regel_id:
