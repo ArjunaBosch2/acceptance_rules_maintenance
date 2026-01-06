@@ -98,12 +98,13 @@ def fetch_product_detail(token, product_id):
 class handler(BaseHTTPRequestHandler):
   def _send_json(self, payload, status_code=200):
     body = json.dumps(payload).encode()
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-        self.wfile.write(body)
+    self.send_response(status_code)
+    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Length", str(len(body)))
+    self.send_header("Cache-Control", "no-store")
+    self.send_header("Access-Control-Allow-Origin", "*")
+    self.end_headers()
+    self.wfile.write(body)
 
   def do_GET(self):
     try:

@@ -7,10 +7,7 @@
     }
   },
   "routes": [
-    { "src": "/api/products", "dest": "/api/products.py" },
-    { "src": "/api/products/(.*)", "dest": "/api/products.py" },
-    { "src": "/api/acceptance-rules", "dest": "/api/acceptance-rules.py" },
-    { "src": "/api/acceptance-rules/(.*)", "dest": "/api/acceptance-rules.py" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
