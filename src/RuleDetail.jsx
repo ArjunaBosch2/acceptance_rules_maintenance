@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+import TopNav from './TopNav';
 
 const RuleDetail = () => {
   const { regelId } = useParams();
@@ -33,8 +34,9 @@ const RuleDetail = () => {
   }, [regelId]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <TopNav />
+      <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate(-1)}

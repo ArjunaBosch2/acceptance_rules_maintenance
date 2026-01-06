@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import TopNav from './TopNav';
 
 const App = () => {
   const [rules, setRules] = useState([]);
@@ -102,8 +103,9 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <TopNav />
+      <div className="max-w-6xl mx-auto p-6">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
