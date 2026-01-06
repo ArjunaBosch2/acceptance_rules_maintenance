@@ -265,11 +265,12 @@ class handler(BaseHTTPRequestHandler):
             resource_id = body.get("ResourceId") or str(uuid.uuid4())
 
             if regel_id is not None:
-                if expressie is None:
-                    self._send_json({"error": "RegelId and Expressie are required"}, status_code=400)
+                if expressie is None or omschrijving is None:
+                    self._send_json({"error": "RegelId, Omschrijving, and Expressie are required"}, status_code=400)
                     return
                 payload = {
                     "RegelId": regel_id,
+                    "Omschrijving": omschrijving,
                     "Expressie": expressie,
                     "ResourceId": resource_id,
                 }

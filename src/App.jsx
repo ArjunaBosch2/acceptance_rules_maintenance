@@ -22,6 +22,7 @@ const App = () => {
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editRuleId, setEditRuleId] = useState(null);
+  const [editOmschrijving, setEditOmschrijving] = useState('');
   const [editExpressie, setEditExpressie] = useState('');
   const [editError, setEditError] = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -160,8 +161,9 @@ const App = () => {
     setCreateForm((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
-  const openEditModal = (regelId, expressieValue) => {
+  const openEditModal = (regelId, omschrijvingValue, expressieValue) => {
     setEditRuleId(regelId);
+    setEditOmschrijving(omschrijvingValue || '');
     setEditExpressie(expressieValue || '');
     setEditError(null);
     setShowEditModal(true);
@@ -174,6 +176,10 @@ const App = () => {
       setEditError('RegelId ontbreekt.');
       return;
     }
+    if (!editOmschrijving.trim()) {
+      setEditError('Omschrijving is verplicht.');
+      return;
+    }
     if (!editExpressie.trim()) {
       setEditError('Xpath expressie is verplicht.');
       return;
@@ -184,6 +190,7 @@ const App = () => {
       const resourceId = crypto?.randomUUID ? crypto.randomUUID() : undefined;
       const payload = {
         RegelId: editRuleId,
+        Omschrijving: editOmschrijving.trim(),
         Expressie: editExpressie.trim(),
         ResourceId: resourceId,
       };
@@ -207,6 +214,7 @@ const App = () => {
       }
       setShowEditModal(false);
       setEditRuleId(null);
+      setEditOmschrijving('');
       setEditExpressie('');
       fetchRules();
     } catch (err) {
@@ -395,6 +403,14 @@ const App = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-2">
                             <button
+                              onClick={() => openEditModal(rule.regelId, rule.omschrijving, '')}
+                              className="p-2 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
+                              title="Bewerk acceptatieregel"
+                              aria-label={`Bewerk acceptatieregel ${rule.regelId}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleDelete(rule.regelId)}
                               disabled={deletingId === rule.regelId}
                               className="p-2 rounded-md border border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -402,14 +418,6 @@ const App = () => {
                               aria-label={`Verwijder acceptatieregel ${rule.regelId}`}
                             >
                               <X className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => openEditModal(rule.regelId)}
-                              className="p-2 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-100 transition-colors"
-                              title="Bewerk acceptatieregel"
-                              aria-label={`Bewerk acceptatieregel ${rule.regelId}`}
-                            >
-                              <Pencil className="w-4 h-4" />
                             </button>
                           </div>
                         </td>
@@ -595,6 +603,18 @@ const App = () => {
               </button>
             </div>
             <form onSubmit={handleEditSubmit} className="px-5 py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700" htmlFor="edit-omschrijving">
+                  Omschrijving
+                </label>
+                <input
+                  id="edit-omschrijving"
+                  type="text"
+                  value={editOmschrijving}
+                  onChange={(event) => setEditOmschrijving(event.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700" htmlFor="edit-expressie">
                   Aangepaste Xpath expressie
