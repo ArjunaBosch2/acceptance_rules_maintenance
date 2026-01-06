@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import os
+import uuid
 from urllib.parse import parse_qs, urlparse
 
 # Cache bearer token between requests to reduce token calls
@@ -134,6 +135,25 @@ def delete_rule(token, host, regel_id):
         return {"status": "deleted"}
 
 
+def create_rule(token, host, payload):
+    with httpx.Client() as client:
+        response = client.put(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/acceptatieregels/invoeren",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            json=payload,
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "created"}
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -203,5 +223,47 @@ class handler(BaseHTTPRequestHandler):
                 "message": exc.response.text,
             }
             self._send_json(detail, status_code=exc.response.status_code)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status_code=500)
+
+    def do_PUT(self):
+        try:
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length).decode() if content_length else ""
+            body = json.loads(raw_body) if raw_body else {}
+
+            afd_code = body.get("AfdBrancheCodeId")
+            omschrijving = body.get("Omschrijving")
+            expressie = body.get("Expressie")
+            resource_id = body.get("ResourceId") or str(uuid.uuid4())
+
+            if afd_code is None or omschrijving is None or expressie is None:
+                self._send_json({"error": "AfdBrancheCodeId, Omschrijving, and Expressie are required"}, status_code=400)
+                return
+
+            payload = {
+                "AfdBrancheCodeId": afd_code,
+                "Omschrijving": omschrijving,
+                "Expressie": expressie,
+                "ResourceId": resource_id,
+            }
+            data = create_rule(token, config["host"], payload)
+            self._send_json(data, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
+                "status_code": exc.response.status_code,
+                "message": exc.response.text,
+            }
+            self._send_json(detail, status_code=exc.response.status_code)
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body"}, status_code=400)
         except Exception as exc:
             self._send_json({"error": str(exc)}, status_code=500)
