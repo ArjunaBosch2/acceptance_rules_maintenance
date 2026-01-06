@@ -54,24 +54,24 @@ const ProductRules = () => {
   }, [productId]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       <TopNav />
       <div className="max-w-6xl mx-auto p-6">
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             ← Terug
           </button>
-          <h1 className="text-2xl font-semibold text-gray-900">
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">
             Acceptatieregels voor product {productId}
           </h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-slate-900 dark:border-slate-700">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between dark:border-slate-700">
+            <p className="text-sm text-gray-600 dark:text-slate-300">
               Overzicht van validatieregels uit de productdefinitie
             </p>
             <button
@@ -85,11 +85,11 @@ const ProductRules = () => {
           </div>
 
           {error && (
-            <div className="mx-6 mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="mx-6 mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-3 dark:bg-yellow-900/30 dark:border-yellow-700/60">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5 dark:text-yellow-400" />
               <div>
-                <p className="text-sm text-yellow-800 font-medium">Kon acceptatieregels niet laden</p>
-                <p className="text-xs text-yellow-700 mt-1">{error}</p>
+                <p className="text-sm text-yellow-800 font-medium dark:text-yellow-200">Kon acceptatieregels niet laden</p>
+                <p className="text-xs text-yellow-700 mt-1 dark:text-yellow-200/80">{error}</p>
               </div>
             </div>
           )}
@@ -101,45 +101,45 @@ const ProductRules = () => {
               </div>
             ) : (
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 border-b border-gray-200 dark:bg-slate-800 dark:border-slate-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       ValidatieregelId
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       AandResultaatAcceptatie
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       Omschrijving
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       IsGeldigBijAanvraag
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       Details
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-gray-200 dark:bg-slate-900 dark:divide-slate-800">
                   {rules.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-slate-400">
                         Geen acceptatieregels gevonden
                       </td>
                     </tr>
                   ) : (
                     rules.map((regel) => (
                       <tr key={regel.ValidatieregelId || regel.validatieregelId}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-100">
                           {regel.ValidatieregelId ?? regel.validatieregelId ?? '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {regel.AandResultaatAcceptatie ?? regel.aandResultaatAcceptatie ?? '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {regel.Omschrijving ?? regel.omschrijving ?? '-'}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
+                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {(regel.IsGeldigBijAanvraag ?? regel.isGeldigBijAanvraag ?? false).toString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -148,7 +148,7 @@ const ProductRules = () => {
                               navigate(`/rules/${regel.ValidatieregelId || regel.validatieregelId}`)
                             }
                             disabled={!(regel.ValidatieregelId || regel.validatieregelId)}
-                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30"
                             title="Toon regel details"
                           >
                             Details
