@@ -116,6 +116,24 @@ def fetch_rule_detail(token, host, regel_id):
         return response.json()
 
 
+def delete_rule(token, host, regel_id):
+    with httpx.Client() as client:
+        response = client.delete(
+            f"{host}/api/v1/administratie/assurantie/regels/acceptatieregels/{regel_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "deleted"}
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -147,6 +165,36 @@ class handler(BaseHTTPRequestHandler):
             else:
                 data = fetch_rules(token, config["host"])
 
+            self._send_json(data, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
+                "status_code": exc.response.status_code,
+                "message": exc.response.text,
+            }
+            self._send_json(detail, status_code=exc.response.status_code)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status_code=500)
+
+    def do_DELETE(self):
+        try:
+            parsed = urlparse(self.path)
+            parts = [p for p in parsed.path.split("/") if p]
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+
+            regel_id = query_params.get("regelId", [None])[0]
+            if not regel_id and len(parts) >= 3 and parts[0] == "api" and parts[1] == "acceptance-rules":
+                regel_id = parts[2] if len(parts) >= 3 and parts[2] else None
+
+            if not regel_id:
+                self._send_json({"error": "regelId is required"}, status_code=400)
+                return
+
+            data = delete_rule(token, config["host"], regel_id)
             self._send_json(data, status_code=200)
         except httpx.HTTPStatusError as exc:
             detail = {

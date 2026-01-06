@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
@@ -10,6 +10,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
   const rulesPerPage = 10;
   const navigate = useNavigate();
 
@@ -105,6 +106,36 @@ const App = () => {
     fetchRules();
   };
 
+  const handleDelete = async (regelId) => {
+    if (!regelId) return;
+    setDeletingId(regelId);
+    setError(null);
+    try {
+      const response = await fetch(
+        withApiEnv(`/api/acceptance-rules?regelId=${encodeURIComponent(regelId)}`),
+        {
+          method: 'DELETE',
+          headers: { 'Cache-Control': 'no-store' },
+        }
+      );
+      if (!response.ok) {
+        let message = `Failed to delete rule (status ${response.status})`;
+        try {
+          const payload = await response.json();
+          message = payload.message || payload.error || message;
+        } catch (err) {
+          // ignore JSON parse failure
+        }
+        throw new Error(message);
+      }
+      setRules((prev) => prev.filter((rule) => rule.regelId !== regelId));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
@@ -180,12 +211,15 @@ const App = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Details
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Verwijder
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {currentRules.length === 0 ? (
                     <tr>
-                      <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                         Geen acceptatieregels gevonden
                       </td>
                     </tr>
@@ -213,6 +247,17 @@ const App = () => {
                             title="Toon details"
                           >
                             Details
+                          </button>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => handleDelete(rule.regelId)}
+                            disabled={deletingId === rule.regelId}
+                            className="p-2 rounded-md border border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Verwijder acceptatieregel"
+                            aria-label={`Verwijder acceptatieregel ${rule.regelId}`}
+                          >
+                            <X className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
