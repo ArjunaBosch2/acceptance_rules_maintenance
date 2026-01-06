@@ -8,8 +8,16 @@
   },
   "rewrites": [
     {
+      "source": "/api/products",
+      "destination": "/api/products.py"
+    },
+    {
       "source": "/api/products/:path*",
       "destination": "/api/products.py"
+    },
+    {
+      "source": "/api/acceptance-rules",
+      "destination": "/api/acceptance-rules.py"
     },
     {
       "source": "/api/acceptance-rules/:path*",
