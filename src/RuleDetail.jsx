@@ -60,7 +60,7 @@ const RuleDetail = () => {
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Regel {regelId}</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-slate-900 dark:border-slate-700">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 dark:bg-slate-900 dark:border-slate-700 neon-card">
           {loading ? (
             <div className="flex justify-center items-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

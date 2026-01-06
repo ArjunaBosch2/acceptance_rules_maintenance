@@ -70,6 +70,12 @@ const TopNav = () => {
               <option value="acceptance">Acceptatie</option>
             </select>
           </div>
+          <NavLink to="/" className={navLinkClasses} end>
+            Acceptatieregels
+          </NavLink>
+          <NavLink to="/producten" className={navLinkClasses}>
+            Producten
+          </NavLink>
           {hasAuth ? (
             <button
               onClick={handleLogout}
@@ -85,12 +91,6 @@ const TopNav = () => {
               Inloggen
             </button>
           )}
-          <NavLink to="/" className={navLinkClasses} end>
-            Acceptatieregels
-          </NavLink>
-          <NavLink to="/producten" className={navLinkClasses}>
-            Producten
-          </NavLink>
         </div>
       </div>
       {showAuthModal && (

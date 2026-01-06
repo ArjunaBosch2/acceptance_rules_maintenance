@@ -69,7 +69,7 @@ const ProductRules = () => {
           </h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-slate-900 dark:border-slate-700">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-slate-900 dark:border-slate-700 neon-card">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between dark:border-slate-700">
             <p className="text-sm text-gray-600 dark:text-slate-300">
               Overzicht van validatieregels uit de productdefinitie
@@ -77,7 +77,7 @@ const ProductRules = () => {
             <button
               onClick={fetchRules}
               disabled={loading}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors neon-primary"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
@@ -148,7 +148,7 @@ const ProductRules = () => {
                               navigate(`/rules/${regel.ValidatieregelId || regel.validatieregelId}`)
                             }
                             disabled={!(regel.ValidatieregelId || regel.validatieregelId)}
-                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30 neon-outline"
                             title="Toon regel details"
                           >
                             Details
