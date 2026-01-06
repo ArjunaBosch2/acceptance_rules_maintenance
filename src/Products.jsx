@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 
 const Products = () => {
@@ -7,6 +8,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   const normalizeProducts = (incoming) => {
     if (!incoming) return [];
@@ -20,6 +22,7 @@ const Products = () => {
         return [
           {
             productId:
+              item.ProductId ??
               item.Productid ??
               item.productid ??
               item.productId ??
@@ -131,22 +134,38 @@ const Products = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Omschrijving
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Acceptatie regels
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan="2" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
                         Geen producten gevonden
                       </td>
                     </tr>
                   ) : (
                     filteredProducts.map((product) => (
-                      <tr key={product.productId || product.omschrijving} className="hover:bg-gray-50 transition-colors">
+                      <tr
+                        key={product.productId || product.omschrijving}
+                        className="hover:bg-gray-50 transition-colors"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {product.productId || '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">{product.omschrijving || '-'}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button
+                            onClick={() => navigate(`/producten/${product.productId}/regels`)}
+                            disabled={!product.productId}
+                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Toon acceptatieregels"
+                          >
+                            Bekijk
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
