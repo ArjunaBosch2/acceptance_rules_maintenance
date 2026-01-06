@@ -104,13 +104,7 @@ const ProductRules = () => {
                       Omschrijving
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      FaseVanafAftrappenValidatieregel
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       IsGeldigBijAanvraag
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      IsGeldigBijMutatie
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Details
@@ -120,7 +114,7 @@ const ProductRules = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {rules.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                         Geen acceptatieregels gevonden
                       </td>
                     </tr>
@@ -137,15 +131,7 @@ const ProductRules = () => {
                           {regel.Omschrijving ?? regel.omschrijving ?? '-'}
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700">
-                          {regel.FaseVanafAftrappenValidatieregel ??
-                            regel.faseVanafAftrappenValidatieregel ??
-                            '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
                           {(regel.IsGeldigBijAanvraag ?? regel.isGeldigBijAanvraag ?? false).toString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700">
-                          {(regel.IsGeldigBijMutatie ?? regel.isGeldigBijMutatie ?? false).toString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button

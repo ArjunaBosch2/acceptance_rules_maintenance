@@ -69,11 +69,13 @@ const Products = () => {
   }, []);
 
   const filteredProducts = products.filter((product) => {
+    const omschrijving = product.omschrijving?.toLowerCase() || '';
+    if (omschrijving.startsWith('unit 4')) return false;
     const term = searchTerm.trim().toLowerCase();
     if (!term) return true;
     return (
       product.productId?.toString().toLowerCase().includes(term) ||
-      product.omschrijving?.toLowerCase().includes(term)
+      omschrijving.includes(term)
     );
   });
 
