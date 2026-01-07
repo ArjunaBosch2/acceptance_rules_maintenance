@@ -3,7 +3,13 @@ from datetime import datetime, timedelta
 import httpx
 import json
 import os
+import sys
 from urllib.parse import parse_qs, urlparse
+
+current_dir = os.path.dirname(__file__)
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
 from _auth import is_authorized, send_unauthorized
 
 # Cache bearer token between requests to reduce token calls
