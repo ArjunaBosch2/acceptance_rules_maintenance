@@ -725,7 +725,10 @@ const App = () => {
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <form onSubmit={handleCreateSubmit} className="px-5 py-4 space-y-4">
+            <form
+              onSubmit={handleCreateSubmit}
+              className="px-5 py-4 space-y-4 max-h-[75vh] overflow-y-auto"
+            >
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-slate-200" htmlFor="omschrijving">
                   Omschrijving
