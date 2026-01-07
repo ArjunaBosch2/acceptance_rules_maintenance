@@ -1,10 +1,10 @@
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime, timedelta
-import base64
 import httpx
 import json
 import os
 from urllib.parse import parse_qs, urlparse
+from _auth import is_authorized, send_unauthorized
 
 # Cache bearer token between requests to reduce token calls
 token_cache = {
@@ -124,35 +124,6 @@ def fetch_product_detail(token, host, product_id):
 
 
 class handler(BaseHTTPRequestHandler):
-    def _send_unauthorized(self):
-        body = json.dumps({"error": "Unauthorized"}).encode()
-        self.send_response(401)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("WWW-Authenticate", 'Basic realm="Acceptatiebeheer"')
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _is_authorized(self):
-        user = os.getenv("BASIC_AUTH_USER")
-        password = os.getenv("BASIC_AUTH_PASS")
-        if not user or not password:
-            return True
-        auth_header = self.headers.get("Authorization") or ""
-        if not auth_header.startswith("Basic "):
-            return False
-        try:
-            encoded = auth_header.split(" ", 1)[1]
-            decoded = base64.b64decode(encoded).decode("utf-8")
-        except Exception:
-            return False
-        if ":" not in decoded:
-            return False
-        input_user, input_pass = decoded.split(":", 1)
-        return input_user == user and input_pass == password
-
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
         self.send_response(status_code)
@@ -165,8 +136,8 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            if not self._is_authorized():
-                self._send_unauthorized()
+            if not is_authorized(self.headers):
+                send_unauthorized(self)
                 return
             parsed = urlparse(self.path)
             parts = [p for p in parsed.path.split("/") if p]

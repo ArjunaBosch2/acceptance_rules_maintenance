@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X, Pencil } from 'lucide-react';
+import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X, Pencil, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
@@ -29,6 +29,40 @@ const App = () => {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const rulesPerPage = 10;
   const navigate = useNavigate();
+  const makeId = () =>
+    crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10);
+  const createEmptyCondition = () => ({
+    id: makeId(),
+    operator: '=',
+    value: '',
+    joiner: 'and',
+  });
+  const createEmptyRecord = () => ({
+    id: makeId(),
+    rubriek: '',
+    joiner: 'and',
+    conditions: [createEmptyCondition()],
+  });
+  const [xpathBuilder, setXpathBuilder] = useState(() => ({
+    records: [createEmptyRecord()],
+  }));
+  const [builderError, setBuilderError] = useState(null);
+  const operatorOptions = [
+    { value: '=', label: '=' },
+    { value: '!=', label: '!=' },
+    { value: '>', label: '>' },
+    { value: '<', label: '<' },
+    { value: '>=', label: '>=' },
+    { value: '<=', label: '<=' },
+    { value: 'contains', label: 'contains' },
+    { value: 'not-contains', label: 'not contains' },
+    { value: 'starts-with', label: 'starts-with' },
+    { value: 'ends-with', label: 'ends-with' },
+  ];
+  const joinerOptions = [
+    { value: 'and', label: 'EN' },
+    { value: 'or', label: 'OF' },
+  ];
 
   // Normalize varying API shapes into the fields the table expects
   const normalizeRules = (incoming) => {
@@ -164,6 +198,166 @@ const App = () => {
     setCreateForm((prev) => ({ ...prev, [field]: event.target.value }));
   };
 
+  const handleRecordUpdate = (recordId, updates) => {
+    setXpathBuilder((prev) => ({
+      ...prev,
+      records: prev.records.map((record) =>
+        record.id === recordId ? { ...record, ...updates } : record
+      ),
+    }));
+    setBuilderError(null);
+  };
+
+  const handleConditionUpdate = (recordId, conditionId, updates) => {
+    setXpathBuilder((prev) => ({
+      ...prev,
+      records: prev.records.map((record) => {
+        if (record.id !== recordId) return record;
+        return {
+          ...record,
+          conditions: record.conditions.map((condition) =>
+            condition.id === conditionId ? { ...condition, ...updates } : condition
+          ),
+        };
+      }),
+    }));
+    setBuilderError(null);
+  };
+
+  const handleAddCondition = (recordId) => {
+    setXpathBuilder((prev) => ({
+      ...prev,
+      records: prev.records.map((record) =>
+        record.id === recordId
+          ? { ...record, conditions: [...record.conditions, createEmptyCondition()] }
+          : record
+      ),
+    }));
+    setBuilderError(null);
+  };
+
+  const handleRemoveCondition = (recordId, conditionId) => {
+    setXpathBuilder((prev) => ({
+      ...prev,
+      records: prev.records.map((record) => {
+        if (record.id !== recordId) return record;
+        const remaining = record.conditions.filter((condition) => condition.id !== conditionId);
+        return {
+          ...record,
+          conditions: remaining.length ? remaining : [createEmptyCondition()],
+        };
+      }),
+    }));
+    setBuilderError(null);
+  };
+
+  const handleAddRecord = () => {
+    setXpathBuilder((prev) => ({
+      ...prev,
+      records: [...prev.records, createEmptyRecord()],
+    }));
+    setBuilderError(null);
+  };
+
+  const handleRemoveRecord = (recordId) => {
+    setXpathBuilder((prev) => {
+      const remaining = prev.records.filter((record) => record.id !== recordId);
+      return {
+        ...prev,
+        records: remaining.length ? remaining : [createEmptyRecord()],
+      };
+    });
+    setBuilderError(null);
+  };
+
+  const normalizeJoiner = (joiner) => (joiner === 'or' ? 'or' : 'and');
+
+  const isNumericValue = (value) => /^-?\d+$/.test(value);
+
+  const buildXPathLiteral = (rawValue) => {
+    if (!rawValue.includes("'")) return `'${rawValue}'`;
+    if (!rawValue.includes('"')) return `"${rawValue}"`;
+    const parts = rawValue.split("'");
+    const wrapped = parts.map((part) => (part ? `'${part}'` : "''"));
+    return `concat(${wrapped.join(',\"\'\",')})`;
+  };
+
+  const buildConditionExpression = (rubriek, condition) => {
+    const value = condition.value.trim();
+    if (!value) return null;
+    const fieldPath = `//${rubriek}`;
+    const fieldLower = `lower-case(${fieldPath})`;
+    const valueLiteral = buildXPathLiteral(value);
+    const valueLower = `lower-case(${valueLiteral})`;
+    const numericOperators = ['>', '<', '>=', '<='];
+    if (numericOperators.includes(condition.operator) && isNumericValue(value)) {
+      return `number(${fieldPath}) ${condition.operator} ${value}`;
+    }
+    switch (condition.operator) {
+      case '=':
+        return `${fieldLower} = ${valueLower}`;
+      case '!=':
+        return `${fieldLower} != ${valueLower}`;
+      case '>':
+      case '<':
+      case '>=':
+      case '<=':
+        return `${fieldLower} ${condition.operator} ${valueLower}`;
+      case 'contains':
+        return `contains(${fieldLower},${valueLower})`;
+      case 'not-contains':
+        return `not(contains(${fieldLower},${valueLower}))`;
+      case 'starts-with':
+        return `starts-with(${fieldLower},${valueLower})`;
+      case 'ends-with':
+        return `ends-with(${fieldLower},${valueLower})`;
+      default:
+        return `${fieldLower} = ${valueLower}`;
+    }
+  };
+
+  const buildRecordExpression = (record) => {
+    const rubriek = record.rubriek.trim();
+    if (!rubriek) return null;
+    const conditionExpressions = record.conditions
+      .map((condition) => buildConditionExpression(rubriek, condition))
+      .filter(Boolean);
+    if (conditionExpressions.length === 0) return null;
+    let combined = conditionExpressions[0];
+    for (let i = 1; i < conditionExpressions.length; i += 1) {
+      const joiner = normalizeJoiner(record.conditions[i].joiner);
+      combined = `${combined} ${joiner} ${conditionExpressions[i]}`;
+    }
+    const conditionBlock =
+      conditionExpressions.length > 1 ? `((${combined}))` : `(${combined})`;
+    return `(fn:exists(//${rubriek}) and ${conditionBlock})`;
+  };
+
+  const buildXPathExpression = (records) => {
+    const recordExpressions = records
+      .map((record) => ({
+        expr: buildRecordExpression(record),
+        joiner: normalizeJoiner(record.joiner),
+      }))
+      .filter((record) => record.expr);
+    if (recordExpressions.length === 0) return '';
+    let combined = recordExpressions[0].expr;
+    for (let i = 1; i < recordExpressions.length; i += 1) {
+      combined = `${combined} ${recordExpressions[i].joiner} ${recordExpressions[i].expr}`;
+    }
+    return `if(( ${combined} )) then false() else true()`;
+  };
+
+  const handleApplyBuilder = () => {
+    const expression = buildXPathExpression(xpathBuilder.records);
+    if (!expression) {
+      setBuilderError('Vul minimaal een rubriek en waarde in.');
+      return;
+    }
+    setCreateForm((prev) => ({ ...prev, expressie: expression }));
+    setBuilderError(null);
+  };
+
   const openEditModal = (regelId, omschrijvingValue, expressieValue) => {
     setEditRuleId(regelId);
     setEditOmschrijving(omschrijvingValue || '');
@@ -284,6 +478,8 @@ const App = () => {
       }
       setShowCreateModal(false);
       setCreateForm({ omschrijving: '', expressie: '', afdBrancheCode: '' });
+      setXpathBuilder({ records: [createEmptyRecord()] });
+      setBuilderError(null);
       setCurrentPage(1);
       fetchRules();
     } catch (err) {
@@ -554,6 +750,210 @@ const App = () => {
                   onChange={handleCreateInputChange('expressie')}
                   className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
+              </div>
+              <div className="flex items-center gap-3 text-xs font-medium text-gray-400 uppercase tracking-widest">
+                <span className="flex-1 h-px bg-gray-200 dark:bg-slate-700"></span>
+                <span>---- OF ----</span>
+                <span className="flex-1 h-px bg-gray-200 dark:bg-slate-700"></span>
+              </div>
+              <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 space-y-4 dark:border-slate-700 dark:bg-slate-800/40">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-800 dark:text-slate-100">Xpath builder</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">
+                      Bouw de expressie met rubrieken en voorwaarden en vul de Xpath Expressie in.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyBuilder}
+                    disabled={!buildXPathExpression(xpathBuilder.records)}
+                    className="px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+                  >
+                    Vul Xpath Expressie
+                  </button>
+                </div>
+                {xpathBuilder.records.map((record, recordIndex) => (
+                  <div
+                    key={record.id}
+                    className="rounded-md border border-gray-200 bg-white/70 p-3 space-y-3 dark:border-slate-700 dark:bg-slate-900/40"
+                  >
+                    {recordIndex > 0 && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label
+                          className="text-xs font-medium text-gray-500 dark:text-slate-400"
+                          htmlFor={`record-joiner-${record.id}`}
+                        >
+                          Koppeling met vorige rubriek
+                        </label>
+                        <select
+                          id={`record-joiner-${record.id}`}
+                          value={record.joiner}
+                          onChange={(event) =>
+                            handleRecordUpdate(record.id, { joiner: event.target.value })
+                          }
+                          className="px-2 py-1 border border-gray-300 rounded-md text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                        >
+                          {joinerOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <label
+                        className="text-xs font-medium text-gray-600 dark:text-slate-300"
+                        htmlFor={`rubriek-${record.id}`}
+                      >
+                        Check op rubriek:
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          id={`rubriek-${record.id}`}
+                          type="text"
+                          value={record.rubriek}
+                          onChange={(event) =>
+                            handleRecordUpdate(record.id, { rubriek: event.target.value })
+                          }
+                          placeholder="Bijv. PG_456"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                        />
+                        <div className="relative group">
+                          <Info
+                            className="w-4 h-4 text-gray-400 dark:text-slate-400"
+                            aria-label="Info over rubriek"
+                          />
+                          <div className="pointer-events-none absolute right-0 top-6 w-72 rounded-md bg-gray-900 text-white text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Plaats hier de entiteit_Tp nummer of AFD subentiteit. Voorbeeld TP nummer:
+                            PG_456. Voorbeeld AFD: OB_KENTEKE.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {record.conditions.map((condition, conditionIndex) => (
+                      <div
+                        key={condition.id}
+                        className="flex flex-wrap items-end gap-3"
+                      >
+                        {conditionIndex > 0 && (
+                          <div className="min-w-[70px]">
+                            <label
+                              className="text-xs font-medium text-gray-500 dark:text-slate-400"
+                              htmlFor={`condition-joiner-${condition.id}`}
+                            >
+                              EN/OF
+                            </label>
+                            <select
+                              id={`condition-joiner-${condition.id}`}
+                              value={condition.joiner}
+                              onChange={(event) =>
+                                handleConditionUpdate(record.id, condition.id, {
+                                  joiner: event.target.value,
+                                })
+                              }
+                              className="mt-1 w-full px-2 py-1 border border-gray-300 rounded-md text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                            >
+                              {joinerOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-[140px]">
+                          <label
+                            className="text-xs font-medium text-gray-600 dark:text-slate-300"
+                            htmlFor={`operator-${condition.id}`}
+                          >
+                            Operator
+                          </label>
+                          <select
+                            id={`operator-${condition.id}`}
+                            value={condition.operator}
+                            onChange={(event) =>
+                              handleConditionUpdate(record.id, condition.id, {
+                                operator: event.target.value,
+                              })
+                            }
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                          >
+                            {operatorOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex-1 min-w-[160px]">
+                          <label
+                            className="text-xs font-medium text-gray-600 dark:text-slate-300"
+                            htmlFor={`waarde-${condition.id}`}
+                          >
+                            Met waarde
+                          </label>
+                          <input
+                            id={`waarde-${condition.id}`}
+                            type="text"
+                            value={condition.value}
+                            onChange={(event) =>
+                              handleConditionUpdate(record.id, condition.id, {
+                                value: event.target.value,
+                              })
+                            }
+                            placeholder="Bijv. 15"
+                            className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                          />
+                        </div>
+                        {conditionIndex > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveCondition(record.id, condition.id)
+                            }
+                            className="px-2 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 dark:text-slate-300 dark:hover:text-slate-100"
+                          >
+                            Verwijder
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleAddCondition(record.id)}
+                        className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                      >
+                        + Extra operatie op dezelfde rubriek
+                      </button>
+                      {xpathBuilder.records.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRecord(record.id)}
+                          className="text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        >
+                          Verwijder rubriek
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={handleAddRecord}
+                    className="text-xs font-medium text-blue-700 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200"
+                  >
+                    + Rubriek toevoegen
+                  </button>
+                  {builderError && (
+                    <span className="text-xs text-red-600 dark:text-red-300">
+                      {builderError}
+                    </span>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-slate-200" htmlFor="afd-branchecode">
