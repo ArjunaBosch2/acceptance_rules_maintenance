@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
@@ -8,6 +8,7 @@ import { getAuthHeader } from './apiAuth';
 const RuleDetail = () => {
   const { regelId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -95,7 +96,14 @@ const RuleDetail = () => {
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-3 mb-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              const listState = location.state?.listState;
+              if (listState) {
+                navigate('/', { state: { listState } });
+              } else {
+                navigate(-1);
+              }
+            }}
             className="flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
           >
             <ArrowLeft className="w-4 h-4" />

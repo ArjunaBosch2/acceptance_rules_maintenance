@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { RefreshCw, ChevronLeft, ChevronRight, AlertCircle, X, Pencil, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
 import { getAuthHeader } from './apiAuth';
@@ -29,6 +29,8 @@ const App = () => {
   const [editSubmitting, setEditSubmitting] = useState(false);
   const rulesPerPage = 10;
   const navigate = useNavigate();
+  const location = useLocation();
+  const restoredListRef = useRef(false);
   const makeId = () =>
     crypto?.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10);
   const createEmptyCondition = () => ({
@@ -138,6 +140,19 @@ const App = () => {
     return () => window.removeEventListener('apiEnvChange', handleEnvChange);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const listState = location.state?.listState;
+    if (!restoredListRef.current && listState) {
+      if (typeof listState.searchTerm === 'string') {
+        setSearchTerm(listState.searchTerm);
+      }
+      if (Number.isFinite(listState.currentPage)) {
+        setCurrentPage(listState.currentPage);
+      }
+      restoredListRef.current = true;
+    }
+  }, [location.state]);
 
   const filteredRules = rules.filter((rule) =>
     rule.regelId?.toString().toLowerCase().includes(searchTerm.trim().toLowerCase())
@@ -580,7 +595,11 @@ const App = () => {
                       <tr key={rule.regelId} className="hover:bg-gray-50 transition-colors dark:hover:bg-slate-800">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-700 dark:text-blue-300">
                           <button
-                            onClick={() => navigate(`/rules/${rule.regelId}`)}
+                            onClick={() =>
+                              navigate(`/rules/${rule.regelId}`, {
+                                state: { listState: { searchTerm, currentPage } },
+                              })
+                            }
                             className="hover:underline"
                           >
                             {rule.regelId}
@@ -594,7 +613,11 @@ const App = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
-                            onClick={() => navigate(`/rules/${rule.regelId}`)}
+                            onClick={() =>
+                              navigate(`/rules/${rule.regelId}`, {
+                                state: { listState: { searchTerm, currentPage } },
+                              })
+                            }
                             className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30 neon-outline"
                             title="Toon details"
                           >

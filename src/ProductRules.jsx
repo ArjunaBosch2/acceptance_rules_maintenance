@@ -221,9 +221,6 @@ const ProductRules = () => {
                       Omschrijving
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
-                      IsGeldigBijAanvraag
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       Details
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
@@ -249,9 +246,6 @@ const ProductRules = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {regel.Omschrijving ?? regel.omschrijving ?? '-'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
-                          {(regel.IsGeldigBijAanvraag ?? regel.isGeldigBijAanvraag ?? false).toString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button

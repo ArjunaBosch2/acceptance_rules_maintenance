@@ -32,6 +32,12 @@ const TopNav = () => {
     return () => window.removeEventListener('authChange', handleAuthChange);
   }, []);
 
+  useEffect(() => {
+    if (!hasAuth) {
+      setShowAuthModal(true);
+    }
+  }, [hasAuth]);
+
   const handleAuthSubmit = (event) => {
     event.preventDefault();
     if (!authUser || !authPass) return;
@@ -83,14 +89,7 @@ const TopNav = () => {
             >
               Uitloggen
             </button>
-          ) : (
-            <button
-              onClick={() => setShowAuthModal(true)}
-              className="text-xs font-medium px-3 py-1.5 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30"
-            >
-              Inloggen
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
       {showAuthModal && (
@@ -98,13 +97,15 @@ const TopNav = () => {
           <div className="bg-white rounded-lg shadow-lg w-full max-w-sm border border-gray-200 dark:bg-slate-900 dark:border-slate-700">
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-slate-700">
               <p className="text-sm font-medium text-gray-900 dark:text-slate-100">Inloggen</p>
-              <button
-                onClick={() => setShowAuthModal(false)}
-                className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
-                aria-label="Sluit formulier"
-              >
-                ×
-              </button>
+              {hasAuth ? (
+                <button
+                  onClick={() => setShowAuthModal(false)}
+                  className="p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-slate-300 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+                  aria-label="Sluit formulier"
+                >
+                  ×
+                </button>
+              ) : null}
             </div>
             <form onSubmit={handleAuthSubmit} className="px-4 py-4 space-y-3">
               <div>
@@ -132,13 +133,15 @@ const TopNav = () => {
                 />
               </div>
               <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAuthModal(false)}
-                  className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md border border-gray-200 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
-                >
-                  Annuleren
-                </button>
+                {hasAuth ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAuthModal(false)}
+                    className="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md border border-gray-200 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-800"
+                  >
+                    Annuleren
+                  </button>
+                ) : null}
                 <button
                   type="submit"
                   className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
