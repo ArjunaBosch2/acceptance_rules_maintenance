@@ -765,18 +765,6 @@ const App = () => {
                   className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-slate-200" htmlFor="expressie">
-                  Xpath Expressie
-                </label>
-                <textarea
-                  id="expressie"
-                  rows="4"
-                  value={createForm.expressie}
-                  onChange={handleCreateInputChange('expressie')}
-                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
-                />
-              </div>
               <div className="flex items-center gap-3 text-xs font-medium text-gray-400 uppercase tracking-widest">
                 <span className="flex-1 h-px bg-gray-200 dark:bg-slate-700"></span>
                 <span>---- OF ----</span>
@@ -980,6 +968,18 @@ const App = () => {
                     </span>
                   )}
                 </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-slate-200" htmlFor="expressie">
+                  Xpath Expressie
+                </label>
+                <textarea
+                  id="expressie"
+                  rows="4"
+                  value={createForm.expressie}
+                  onChange={handleCreateInputChange('expressie')}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-slate-200" htmlFor="afd-branchecode">
