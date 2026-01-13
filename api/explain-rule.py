@@ -22,14 +22,45 @@ OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "350"))
 RUBRIEK_PATTERN = re.compile(r"[A-Za-z]{1,10}_[A-Za-z0-9]+")
 
 
-def build_prompt(expression):
+def build_prompt(expression, rubriek_labels):
+    rubriek_lines = []
+    for item in rubriek_labels or []:
+        code = item.get("code")
+        label = item.get("label")
+        if not code or not label:
+            continue
+        values = item.get("values") or []
+        if values:
+            pairs = []
+            for value in values:
+                code_value = str(value.get("code") or "").strip()
+                omschrijving = str(value.get("omschrijving") or "").strip()
+                if code_value and omschrijving and code_value != omschrijving:
+                    pairs.append(f"{code_value}={omschrijving}")
+                elif code_value:
+                    pairs.append(code_value)
+                elif omschrijving:
+                    pairs.append(omschrijving)
+            if pairs:
+                rubriek_lines.append(f"{code} -> {label} (waarden: {', '.join(pairs)})")
+                continue
+        rubriek_lines.append(f"{code} -> {label}")
+
+    rubriek_block = "\n".join(rubriek_lines)
     return (
         "You are a Xpath expression interpreter. Answer in Dutch.\n"
         "Return exactly:\n"
         "- 3 to 5 bullet points, each a short sentence starting with '- '.\n"
         "Then one short summary sentence starting with 'Samenvatting:'.\n"
         "Do not add extra text.\n"
-        "Xpath expression:\n"
+        "When explaining result false/true, avoid 'Het resultaat is false'. Use: "
+        "'Deze acceptatieregel gaat af als ...' and explain conditions.\n"
+        "Use the label names instead of rubriek codes.\n"
+        "If a rubriek has enum values and the expression compares to a specific code, "
+        "use the matching omschrijving (not the code) in the explanation.\n"
+        "Do not list all possible enum values in the explanation.\n"
+        + (f"Rubriek info:\n{rubriek_block}\n" if rubriek_block else "")
+        + "Xpath expression:\n"
         f"{expression}"
     )
 
@@ -151,7 +182,7 @@ def apply_label_overrides(text, rubriek_labels):
         return text
     items = sorted(
         (
-            (item.get("code"), item.get("label"), item.get("values") or [])
+            (item.get("code"), item.get("label"))
             for item in rubriek_labels
             if item.get("code") and item.get("label")
         ),
@@ -159,22 +190,31 @@ def apply_label_overrides(text, rubriek_labels):
         reverse=True,
     )
     updated = text
-    for code, label, values in items:
-        label_text = str(label)
-        if values:
-            pairs = []
-            for item in values:
-                code_value = str(item.get("code") or "").strip()
-                omschrijving = str(item.get("omschrijving") or "").strip()
-                if code_value and omschrijving and code_value != omschrijving:
-                    pairs.append(f"{code_value}={omschrijving}")
-                elif code_value:
-                    pairs.append(code_value)
-                elif omschrijving:
-                    pairs.append(omschrijving)
-            if pairs:
-                label_text = f"{label_text} (waarden: {', '.join(pairs)})"
-        updated = re.sub(rf"\b{re.escape(code)}\b", label_text, updated)
+    for code, label in items:
+        updated = re.sub(rf"\b{re.escape(code)}\b", str(label), updated)
+    return updated
+
+
+def apply_value_overrides(text, rubriek_labels):
+    if not text or not rubriek_labels:
+        return text
+    updated = text
+    for item in rubriek_labels:
+        label = item.get("label")
+        values = item.get("values") or []
+        if not label or not values:
+            continue
+        for value in values:
+            code_value = str(value.get("code") or "").strip()
+            omschrijving = str(value.get("omschrijving") or "").strip()
+            if not code_value or not omschrijving or code_value == omschrijving:
+                continue
+            patterns = [
+                rf"({re.escape(label)}[^.\n]*?\bgelijk\s+(?:is|zijn)\s+aan\s+)['\"]?{re.escape(code_value)}['\"]?",
+                rf"({re.escape(label)}[^.\n]*?\b=+\s*)['\"]?{re.escape(code_value)}['\"]?",
+            ]
+            for pattern in patterns:
+                updated = re.sub(pattern, rf"\1{omschrijving}", updated)
     return updated
 
 
@@ -188,6 +228,35 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
+
+    def _fetch_rubriek_labels(self, expression, product_id, env_key):
+        if not expression or not product_id:
+            return []
+        try:
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+            product_payload = fetch_product_detail(token, config["host"], product_id)
+            return resolve_rubriek_labels(expression, product_payload)
+        except Exception:
+            return []
+
+    def do_GET(self):
+        if not is_authorized(self.headers):
+            send_unauthorized(self)
+            return
+        parsed = urlparse(self.path)
+        query_params = parse_qs(parsed.query or "")
+        env_param = query_params.get("env", ["production"])[0]
+        env_key = "acceptance" if env_param == "acceptance" else "production"
+        expression = query_params.get("expression", [None])[0]
+        product_id = query_params.get("productId", [None])[0]
+
+        if not expression:
+            self._send_json({"status": "ok"}, status_code=200)
+            return
+
+        rubriek_labels = self._fetch_rubriek_labels(expression, product_id, env_key)
+        self._send_json({"explanation": "", "rubriekLabels": rubriek_labels}, status_code=200)
 
     def do_POST(self):
         try:
@@ -209,19 +278,11 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "expression is required"}, status_code=400)
                 return
 
-            rubriek_labels = []
-            if product_id:
-                try:
-                    parsed = urlparse(self.path)
-                    query_params = parse_qs(parsed.query or "")
-                    env_param = query_params.get("env", ["production"])[0]
-                    env_key = "acceptance" if env_param == "acceptance" else "production"
-                    config = get_env_config(env_key)
-                    token = get_bearer_token(env_key)
-                    product_payload = fetch_product_detail(token, config["host"], product_id)
-                    rubriek_labels = resolve_rubriek_labels(expression, product_payload)
-                except Exception:
-                    rubriek_labels = []
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            rubriek_labels = self._fetch_rubriek_labels(expression, product_id, env_key)
 
             if labels_only:
                 self._send_json(
@@ -230,7 +291,7 @@ class handler(BaseHTTPRequestHandler):
                 )
                 return
 
-            prompt = build_prompt(expression)
+            prompt = build_prompt(expression, rubriek_labels)
             payload = {
                 "model": OPENAI_MODEL,
                 "input": prompt,
@@ -261,6 +322,7 @@ class handler(BaseHTTPRequestHandler):
                 if not text:
                     text = data.get("output_text")
                 final_text = apply_label_overrides(text or "", rubriek_labels)
+                final_text = apply_value_overrides(final_text, rubriek_labels)
                 self._send_json(
                     {"explanation": final_text or "", "rubriekLabels": rubriek_labels},
                     status_code=200,
