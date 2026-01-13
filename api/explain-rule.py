@@ -1,7 +1,9 @@
 from http.server import BaseHTTPRequestHandler
+from urllib.parse import parse_qs, urlparse
 import httpx
 import json
 import os
+import re
 import sys
 
 current_dir = os.path.dirname(__file__)
@@ -9,12 +11,15 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 from _auth import is_authorized, send_unauthorized
+from products import fetch_product_detail, get_bearer_token, get_env_config
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2")
 OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "350"))
+
+RUBRIEK_PATTERN = re.compile(r"[A-Za-z]{1,10}_[A-Za-z0-9]+")
 
 
 def build_prompt(expression):
@@ -27,6 +32,72 @@ def build_prompt(expression):
         "Xpath expression:\n"
         f"{expression}"
     )
+
+
+def extract_rubriek_codes(expression):
+    seen = set()
+    ordered = []
+    for match in RUBRIEK_PATTERN.finditer(expression or ""):
+        code = match.group(0)
+        if code in seen:
+            continue
+        seen.add(code)
+        ordered.append(code)
+    return ordered
+
+
+def collect_label_records(payload):
+    records = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if (node.get("Labelnaam") or node.get("labelnaam")) and (
+                "RubriekId" in node or "rubriekId" in node or "AFDlabel" in node or "afdlabel" in node
+            ):
+                records.append(node)
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(payload)
+    return records
+
+
+def build_label_lookups(payload):
+    custom_by_id = {}
+    default_by_afdlabel = {}
+    for record in collect_label_records(payload):
+        label = record.get("Labelnaam") or record.get("labelnaam")
+        if not label:
+            continue
+        rubriek_id = record.get("RubriekId") or record.get("rubriekId")
+        if rubriek_id is not None:
+            custom_by_id[str(rubriek_id)] = label
+        afd_label = record.get("AFDlabel") or record.get("afdlabel")
+        if afd_label:
+            afd_label_str = str(afd_label)
+            default_by_afdlabel[afd_label_str] = label
+            if "_" in afd_label_str:
+                default_by_afdlabel.setdefault(afd_label_str.split("_", 1)[1], label)
+    return custom_by_id, default_by_afdlabel
+
+
+def resolve_rubriek_labels(expression, product_payload):
+    if not product_payload:
+        return []
+    custom_by_id, default_by_afdlabel = build_label_lookups(product_payload)
+    labels = []
+    for code in extract_rubriek_codes(expression):
+        parts = code.split("_", 1)
+        if len(parts) != 2:
+            continue
+        suffix = parts[1]
+        label = custom_by_id.get(suffix) if suffix.isdigit() else default_by_afdlabel.get(suffix)
+        if label:
+            labels.append({"code": code, "label": label})
+    return labels
 
 
 class handler(BaseHTTPRequestHandler):
@@ -53,9 +124,32 @@ class handler(BaseHTTPRequestHandler):
             raw_body = self.rfile.read(content_length).decode() if content_length else ""
             body = json.loads(raw_body) if raw_body else {}
             expression = body.get("expression")
+            product_id = body.get("productId") or body.get("product_id")
+            labels_only = bool(body.get("labelsOnly"))
 
             if not expression:
                 self._send_json({"error": "expression is required"}, status_code=400)
+                return
+
+            rubriek_labels = []
+            if product_id:
+                try:
+                    parsed = urlparse(self.path)
+                    query_params = parse_qs(parsed.query or "")
+                    env_param = query_params.get("env", ["production"])[0]
+                    env_key = "acceptance" if env_param == "acceptance" else "production"
+                    config = get_env_config(env_key)
+                    token = get_bearer_token(env_key)
+                    product_payload = fetch_product_detail(token, config["host"], product_id)
+                    rubriek_labels = resolve_rubriek_labels(expression, product_payload)
+                except Exception:
+                    rubriek_labels = []
+
+            if labels_only:
+                self._send_json(
+                    {"explanation": "", "rubriekLabels": rubriek_labels},
+                    status_code=200,
+                )
                 return
 
             prompt = build_prompt(expression)
@@ -88,7 +182,10 @@ class handler(BaseHTTPRequestHandler):
                         break
                 if not text:
                     text = data.get("output_text")
-                self._send_json({"explanation": text or ""}, status_code=200)
+                self._send_json(
+                    {"explanation": text or "", "rubriekLabels": rubriek_labels},
+                    status_code=200,
+                )
         except httpx.HTTPStatusError as exc:
             detail = {
                 "error": "Upstream request failed",

@@ -15,6 +15,9 @@ const RuleDetail = () => {
   const [explainLoading, setExplainLoading] = useState(false);
   const [explainError, setExplainError] = useState(null);
   const [explanation, setExplanation] = useState({ bullets: [], summary: '' });
+  const [rubriekLabels, setRubriekLabels] = useState([]);
+  const productId =
+    location.state?.productId || new URLSearchParams(location.search || '').get('productId');
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -33,6 +36,7 @@ const RuleDetail = () => {
         const rule = Array.isArray(data) ? data[0] : data;
         setDetail(rule);
         setExplanation({ bullets: [], summary: '' });
+        setRubriekLabels([]);
         setExplainError(null);
       } catch (err) {
         setError(err.message);
@@ -51,20 +55,64 @@ const RuleDetail = () => {
     return () => window.removeEventListener('apiEnvChange', handleEnvChange);
   }, [regelId]);
 
+  useEffect(() => {
+    const fetchRubriekLabels = async () => {
+      const expression = detail?.Expressie || detail?.expressie;
+      if (!expression || !productId) return;
+      try {
+        const labelsResponse = await fetch(withApiEnv('/api/explain-rule'), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader(),
+          },
+          body: JSON.stringify({ expression, productId, labelsOnly: true }),
+        });
+        if (!labelsResponse.ok) return;
+        const labelsData = await labelsResponse.json();
+        setRubriekLabels(Array.isArray(labelsData.rubriekLabels) ? labelsData.rubriekLabels : []);
+      } catch (err) {
+        // ignore label lookup failure to keep detail view usable
+      }
+    };
+
+    fetchRubriekLabels();
+  }, [detail, productId]);
+
   const handleExplain = async () => {
     const expression = detail?.Expressie || detail?.expressie;
     if (!expression) return;
     setExplainLoading(true);
     setExplainError(null);
     setExplanation({ bullets: [], summary: '' });
+    setRubriekLabels([]);
     try {
-      const response = await fetch('/api/explain-rule', {
+      if (productId) {
+        try {
+          const labelsResponse = await fetch(withApiEnv('/api/explain-rule'), {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...getAuthHeader(),
+            },
+            body: JSON.stringify({ expression, productId, labelsOnly: true }),
+          });
+          if (labelsResponse.ok) {
+            const labelsData = await labelsResponse.json();
+            setRubriekLabels(Array.isArray(labelsData.rubriekLabels) ? labelsData.rubriekLabels : []);
+          }
+        } catch (err) {
+          // ignore label lookup failure to keep explanation flow
+        }
+      }
+
+      const response = await fetch(withApiEnv('/api/explain-rule'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeader(),
         },
-        body: JSON.stringify({ expression }),
+        body: JSON.stringify({ expression, productId }),
       });
       if (!response.ok) {
         let message = `Failed to explain rule (status ${response.status})`;
@@ -83,6 +131,9 @@ const RuleDetail = () => {
       const summaryLine = lines.find((line) => line.toLowerCase().startsWith('samenvatting:'));
       const summary = summaryLine ? summaryLine.replace(/^samenvatting:\s*/i, '') : '';
       setExplanation({ bullets, summary });
+      if (Array.isArray(data.rubriekLabels) && data.rubriekLabels.length > 0) {
+        setRubriekLabels(data.rubriekLabels);
+      }
     } catch (err) {
       setExplainError(err.message);
     } finally {
@@ -164,6 +215,20 @@ const RuleDetail = () => {
                       <p className="mt-3 text-sm text-slate-200">
                         Samenvatting: {explanation.summary}
                       </p>
+                    )}
+                    {rubriekLabels.length > 0 && (
+                      <div className="mt-4 border-t border-purple-500/30 pt-3">
+                        <p className="text-xs uppercase tracking-wider text-purple-200">
+                          Uitleg rubrieken
+                        </p>
+                        <ul className="mt-2 space-y-1 text-sm text-slate-100">
+                          {rubriekLabels.map((item) => (
+                            <li key={`${item.code}-${item.label}`}>
+                              <span className="font-semibold">{item.code}:</span> {item.label}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                   </div>
                 )}

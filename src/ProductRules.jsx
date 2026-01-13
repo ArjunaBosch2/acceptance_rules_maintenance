@@ -250,7 +250,12 @@ const ProductRules = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() =>
-                              navigate(`/rules/${regel.ValidatieregelId || regel.validatieregelId}`)
+                              navigate(
+                                `/rules/${regel.ValidatieregelId || regel.validatieregelId}?productId=${encodeURIComponent(
+                                  productId
+                                )}`,
+                                { state: { productId } }
+                              )
                             }
                             disabled={!(regel.ValidatieregelId || regel.validatieregelId)}
                             className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30 neon-outline"
