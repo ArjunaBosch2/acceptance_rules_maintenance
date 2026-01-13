@@ -89,17 +89,35 @@ def build_label_lookups(payload):
         label = get_ci_value(record, "Labelnaam")
         if not label:
             continue
+        values = []
+        raw_values = get_ci_value(record, "Waardes")
+        if isinstance(raw_values, list):
+            for item in raw_values:
+                if not isinstance(item, dict):
+                    continue
+                code = get_ci_value(item, "Code")
+                omschrijving = get_ci_value(item, "Omschrijving")
+                if code is None and omschrijving is None:
+                    continue
+                values.append(
+                    {
+                        "code": "" if code is None else str(code),
+                        "omschrijving": "" if omschrijving is None else str(omschrijving),
+                    }
+                )
         rubriek_id = get_ci_value(record, "RubriekId")
         if rubriek_id is not None:
             rubriek_id_str = str(rubriek_id)
-            custom_by_id[rubriek_id_str] = label
+            custom_by_id[rubriek_id_str] = {"label": label, "values": values}
             match = re.search(r"_(\d+)$", rubriek_id_str)
             if match:
-                custom_by_id.setdefault(match.group(1), label)
+                custom_by_id.setdefault(
+                    match.group(1), {"label": label, "values": values}
+                )
         afd_label = get_ci_value(record, "AFDlabel")
         if afd_label:
             afd_label_str = str(afd_label)
-            default_by_afdlabel[afd_label_str] = label
+            default_by_afdlabel[afd_label_str] = {"label": label, "values": values}
     return custom_by_id, default_by_afdlabel
 
 
@@ -114,11 +132,17 @@ def resolve_rubriek_labels(expression, product_payload):
             continue
         suffix = parts[1]
         if suffix.isdigit():
-            label = custom_by_id.get(suffix)
+            info = custom_by_id.get(suffix)
         else:
-            label = default_by_afdlabel.get(code)
-        if label:
-            labels.append({"code": code, "label": label})
+            info = default_by_afdlabel.get(code)
+        if info and info.get("label"):
+            labels.append(
+                {
+                    "code": code,
+                    "label": info.get("label"),
+                    "values": info.get("values") or [],
+                }
+            )
     return labels
 
 
@@ -127,7 +151,7 @@ def apply_label_overrides(text, rubriek_labels):
         return text
     items = sorted(
         (
-            (item.get("code"), item.get("label"))
+            (item.get("code"), item.get("label"), item.get("values") or [])
             for item in rubriek_labels
             if item.get("code") and item.get("label")
         ),
@@ -135,8 +159,22 @@ def apply_label_overrides(text, rubriek_labels):
         reverse=True,
     )
     updated = text
-    for code, label in items:
-        updated = re.sub(rf"\b{re.escape(code)}\b", str(label), updated)
+    for code, label, values in items:
+        label_text = str(label)
+        if values:
+            pairs = []
+            for item in values:
+                code_value = str(item.get("code") or "").strip()
+                omschrijving = str(item.get("omschrijving") or "").strip()
+                if code_value and omschrijving and code_value != omschrijving:
+                    pairs.append(f"{code_value}={omschrijving}")
+                elif code_value:
+                    pairs.append(code_value)
+                elif omschrijving:
+                    pairs.append(omschrijving)
+            if pairs:
+                label_text = f"{label_text} (waarden: {', '.join(pairs)})"
+        updated = re.sub(rf"\b{re.escape(code)}\b", label_text, updated)
     return updated
 
 

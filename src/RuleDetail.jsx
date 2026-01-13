@@ -202,12 +202,33 @@ const RuleDetail = () => {
                         Rubrieken laden...
                       </div>
                     ) : (
-                      <ul className="mt-2 space-y-1 text-sm text-slate-100">
-                        {rubriekLabels.map((item) => (
-                          <li key={`${item.code}-${item.label}`}>
-                            <span className="font-semibold">{item.code}:</span> {item.label}
-                          </li>
-                        ))}
+                      <ul className="mt-2 space-y-2 text-sm text-slate-100">
+                        {rubriekLabels.map((item) => {
+                          const values = Array.isArray(item.values) ? item.values : [];
+                          const valueText = values
+                            .map((value) => {
+                              const code = value?.code?.toString().trim();
+                              const omschrijving = value?.omschrijving?.toString().trim();
+                              if (code && omschrijving && code !== omschrijving) {
+                                return `${code}=${omschrijving}`;
+                              }
+                              return code || omschrijving || '';
+                            })
+                            .filter(Boolean)
+                            .join(', ');
+                          return (
+                            <li key={`${item.code}-${item.label}`}>
+                              <div>
+                                <span className="font-semibold">{item.code}:</span> {item.label}
+                              </div>
+                              {valueText && (
+                                <div className="text-xs text-purple-100/90">
+                                  Waarden: {valueText}
+                                </div>
+                              )}
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>
