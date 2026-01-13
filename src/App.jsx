@@ -516,7 +516,7 @@ const App = () => {
                   Acceptatieregels
                 </h1>
                 <p className="text-sm text-gray-600 mt-1 dark:text-slate-300">
-                  Beheer van verzekering acceptatieregels
+                  Beheer van verzekering acceptatieregels. Voor details ga je naar Producten
                 </p>
               </div>
               <div className="flex flex-col gap-2 md:flex-row md:items-center">
@@ -576,9 +576,6 @@ const App = () => {
                       Omschrijving
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
-                      Details
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       Aanpassen
                     </th>
                   </tr>
@@ -610,19 +607,6 @@ const App = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {rule.omschrijving}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() =>
-                              navigate(`/rules/${rule.regelId}`, {
-                                state: { listState: { searchTerm, currentPage } },
-                              })
-                            }
-                            className="px-3 py-2 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30 neon-outline"
-                            title="Toon details"
-                          >
-                            Details
-                          </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center gap-2">
