@@ -1,19 +1,17 @@
 {
   "version": 2,
   "functions": {
+    "api/explain-rule.py": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
     "api/**/*.py": {
       "maxDuration": 10,
       "memory": 1024
     }
   },
-  "routes": [
-    {
-      "src": "/api/explain-rule",
-      "dest": "/api/explain-rule.py",
-      "methods": ["GET", "POST", "OPTIONS"]
-    },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
