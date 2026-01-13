@@ -46,13 +46,30 @@ def extract_rubriek_codes(expression):
     return ordered
 
 
+def get_ci_value(node, key):
+    if not isinstance(node, dict):
+        return None
+    target = key.lower()
+    for k, v in node.items():
+        if str(k).lower() == target:
+            return v
+    return None
+
+
+def has_ci_key(node, key):
+    if not isinstance(node, dict):
+        return False
+    target = key.lower()
+    return any(str(k).lower() == target for k in node.keys())
+
+
 def collect_label_records(payload):
     records = []
 
     def walk(node):
         if isinstance(node, dict):
-            if (node.get("Labelnaam") or node.get("labelnaam")) and (
-                "RubriekId" in node or "rubriekId" in node or "AFDlabel" in node or "afdlabel" in node
+            if get_ci_value(node, "Labelnaam") and (
+                has_ci_key(node, "RubriekId") or has_ci_key(node, "AFDlabel")
             ):
                 records.append(node)
             for value in node.values():
@@ -69,13 +86,13 @@ def build_label_lookups(payload):
     custom_by_id = {}
     default_by_afdlabel = {}
     for record in collect_label_records(payload):
-        label = record.get("Labelnaam") or record.get("labelnaam")
+        label = get_ci_value(record, "Labelnaam")
         if not label:
             continue
-        rubriek_id = record.get("RubriekId") or record.get("rubriekId")
+        rubriek_id = get_ci_value(record, "RubriekId")
         if rubriek_id is not None:
             custom_by_id[str(rubriek_id)] = label
-        afd_label = record.get("AFDlabel") or record.get("afdlabel")
+        afd_label = get_ci_value(record, "AFDlabel")
         if afd_label:
             afd_label_str = str(afd_label)
             default_by_afdlabel[afd_label_str] = label
