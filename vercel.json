@@ -1,7 +1,7 @@
 {
   "version": 2,
   "functions": {
-    "api/explain_rule.py": {
+    "api/explain_rule": {
       "maxDuration": 30,
       "memory": 1024
     },
