@@ -121,6 +121,24 @@ def resolve_rubriek_labels(expression, product_payload):
     return labels
 
 
+def apply_label_overrides(text, rubriek_labels):
+    if not text or not rubriek_labels:
+        return text
+    items = sorted(
+        (
+            (item.get("code"), item.get("label"))
+            for item in rubriek_labels
+            if item.get("code") and item.get("label")
+        ),
+        key=lambda pair: len(pair[0]),
+        reverse=True,
+    )
+    updated = text
+    for code, label in items:
+        updated = re.sub(rf"\b{re.escape(code)}\b", str(label), updated)
+    return updated
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -203,8 +221,9 @@ class handler(BaseHTTPRequestHandler):
                         break
                 if not text:
                     text = data.get("output_text")
+                final_text = apply_label_overrides(text or "", rubriek_labels)
                 self._send_json(
-                    {"explanation": text or "", "rubriekLabels": rubriek_labels},
+                    {"explanation": final_text or "", "rubriekLabels": rubriek_labels},
                     status_code=200,
                 )
         except httpx.HTTPStatusError as exc:

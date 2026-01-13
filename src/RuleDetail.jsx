@@ -187,6 +187,20 @@ const RuleDetail = () => {
                 <dd className="text-lg text-gray-900 whitespace-pre-wrap dark:text-slate-100">
                   {detail.Expressie || detail.expressie || '-'}
                 </dd>
+                {rubriekLabels.length > 0 && (
+                  <div className="mt-4 rounded-lg border border-purple-500/30 bg-purple-900/10 p-4 text-sm text-slate-100">
+                    <p className="text-xs uppercase tracking-wider text-purple-200">
+                      Uitleg rubrieken
+                    </p>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-100">
+                      {rubriekLabels.map((item) => (
+                        <li key={`${item.code}-${item.label}`}>
+                          <span className="font-semibold">{item.code}:</span> {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div className="mt-4 flex items-center gap-3">
                   <button
                     onClick={handleExplain}
@@ -215,20 +229,6 @@ const RuleDetail = () => {
                       <p className="mt-3 text-sm text-slate-200">
                         Samenvatting: {explanation.summary}
                       </p>
-                    )}
-                    {rubriekLabels.length > 0 && (
-                      <div className="mt-4 border-t border-purple-500/30 pt-3">
-                        <p className="text-xs uppercase tracking-wider text-purple-200">
-                          Uitleg rubrieken
-                        </p>
-                        <ul className="mt-2 space-y-1 text-sm text-slate-100">
-                          {rubriekLabels.map((item) => (
-                            <li key={`${item.code}-${item.label}`}>
-                              <span className="font-semibold">{item.code}:</span> {item.label}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
                     )}
                   </div>
                 )}
