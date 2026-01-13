@@ -100,8 +100,6 @@ def build_label_lookups(payload):
         if afd_label:
             afd_label_str = str(afd_label)
             default_by_afdlabel[afd_label_str] = label
-            if "_" in afd_label_str:
-                default_by_afdlabel.setdefault(afd_label_str.split("_", 1)[1], label)
     return custom_by_id, default_by_afdlabel
 
 
@@ -115,7 +113,10 @@ def resolve_rubriek_labels(expression, product_payload):
         if len(parts) != 2:
             continue
         suffix = parts[1]
-        label = custom_by_id.get(suffix) if suffix.isdigit() else default_by_afdlabel.get(suffix)
+        if suffix.isdigit():
+            label = custom_by_id.get(suffix)
+        else:
+            label = default_by_afdlabel.get(code)
         if label:
             labels.append({"code": code, "label": label})
     return labels

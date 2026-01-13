@@ -16,6 +16,7 @@ const RuleDetail = () => {
   const [explainError, setExplainError] = useState(null);
   const [explanation, setExplanation] = useState({ bullets: [], summary: '' });
   const [rubriekLabels, setRubriekLabels] = useState([]);
+  const [rubriekLabelsLoading, setRubriekLabelsLoading] = useState(false);
   const productId =
     location.state?.productId || new URLSearchParams(location.search || '').get('productId');
 
@@ -60,6 +61,7 @@ const RuleDetail = () => {
       const expression = detail?.Expressie || detail?.expressie;
       if (!expression || !productId) return;
       try {
+        setRubriekLabelsLoading(true);
         const labelsResponse = await fetch(withApiEnv('/api/explain-rule'), {
           method: 'POST',
           headers: {
@@ -73,6 +75,8 @@ const RuleDetail = () => {
         setRubriekLabels(Array.isArray(labelsData.rubriekLabels) ? labelsData.rubriekLabels : []);
       } catch (err) {
         // ignore label lookup failure to keep detail view usable
+      } finally {
+        setRubriekLabelsLoading(false);
       }
     };
 
@@ -187,18 +191,25 @@ const RuleDetail = () => {
                 <dd className="text-lg text-gray-900 whitespace-pre-wrap dark:text-slate-100">
                   {detail.Expressie || detail.expressie || '-'}
                 </dd>
-                {rubriekLabels.length > 0 && (
+                {(rubriekLabelsLoading || rubriekLabels.length > 0) && (
                   <div className="mt-4 rounded-lg border border-purple-500/30 bg-purple-900/10 p-4 text-sm text-slate-100">
                     <p className="text-xs uppercase tracking-wider text-purple-200">
                       Uitleg rubrieken
                     </p>
-                    <ul className="mt-2 space-y-1 text-sm text-slate-100">
-                      {rubriekLabels.map((item) => (
-                        <li key={`${item.code}-${item.label}`}>
-                          <span className="font-semibold">{item.code}:</span> {item.label}
-                        </li>
-                      ))}
-                    </ul>
+                    {rubriekLabelsLoading ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-purple-100">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-purple-200 border-t-transparent"></span>
+                        Rubrieken laden...
+                      </div>
+                    ) : (
+                      <ul className="mt-2 space-y-1 text-sm text-slate-100">
+                        {rubriekLabels.map((item) => (
+                          <li key={`${item.code}-${item.label}`}>
+                            <span className="font-semibold">{item.code}:</span> {item.label}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
                 <div className="mt-4 flex items-center gap-3">
