@@ -243,7 +243,13 @@ class handler(BaseHTTPRequestHandler):
             return []
 
     def do_OPTIONS(self):
-        self._send_json({}, status_code=200)
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.send_header("Access-Control-Max-Age", "86400")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_GET(self):
         if not is_authorized(self.headers):
