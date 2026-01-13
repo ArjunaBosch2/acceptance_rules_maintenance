@@ -226,8 +226,16 @@ class handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
         self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self._send_json({}, status_code=200)
+
+    def do_GET(self):
+        self._send_json({"status": "ok"}, status_code=200)
 
     def do_POST(self):
         try:
