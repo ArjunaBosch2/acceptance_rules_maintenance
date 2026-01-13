@@ -91,7 +91,11 @@ def build_label_lookups(payload):
             continue
         rubriek_id = get_ci_value(record, "RubriekId")
         if rubriek_id is not None:
-            custom_by_id[str(rubriek_id)] = label
+            rubriek_id_str = str(rubriek_id)
+            custom_by_id[rubriek_id_str] = label
+            match = re.search(r"_(\d+)$", rubriek_id_str)
+            if match:
+                custom_by_id.setdefault(match.group(1), label)
         afd_label = get_ci_value(record, "AFDlabel")
         if afd_label:
             afd_label_str = str(afd_label)
