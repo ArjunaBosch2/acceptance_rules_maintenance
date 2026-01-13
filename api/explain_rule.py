@@ -231,11 +231,41 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _fetch_rubriek_labels(self, expression, product_id, env_key):
+        if not expression or not product_id:
+            return []
+        try:
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+            product_payload = fetch_product_detail(token, config["host"], product_id)
+            return resolve_rubriek_labels(expression, product_payload)
+        except Exception:
+            return []
+
     def do_OPTIONS(self):
         self._send_json({}, status_code=200)
 
     def do_GET(self):
-        self._send_json({"status": "ok"}, status_code=200)
+        if not is_authorized(self.headers):
+            send_unauthorized(self)
+            return
+        parsed = urlparse(self.path)
+        query_params = parse_qs(parsed.query or "")
+        env_param = query_params.get("env", ["production"])[0]
+        env_key = "acceptance" if env_param == "acceptance" else "production"
+        expression = query_params.get("expression", [None])[0]
+        product_id = query_params.get("productId", [None])[0]
+        labels_only = query_params.get("labelsOnly", ["true"])[0].lower() in ("1", "true", "yes")
+
+        if not expression:
+            self._send_json({"status": "ok"}, status_code=200)
+            return
+        if not labels_only:
+            self._send_json({"error": "Use POST for explanations"}, status_code=405)
+            return
+
+        rubriek_labels = self._fetch_rubriek_labels(expression, product_id, env_key)
+        self._send_json({"explanation": "", "rubriekLabels": rubriek_labels}, status_code=200)
 
     def do_POST(self):
         try:
@@ -257,19 +287,11 @@ class handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "expression is required"}, status_code=400)
                 return
 
-            rubriek_labels = []
-            if product_id:
-                try:
-                    parsed = urlparse(self.path)
-                    query_params = parse_qs(parsed.query or "")
-                    env_param = query_params.get("env", ["production"])[0]
-                    env_key = "acceptance" if env_param == "acceptance" else "production"
-                    config = get_env_config(env_key)
-                    token = get_bearer_token(env_key)
-                    product_payload = fetch_product_detail(token, config["host"], product_id)
-                    rubriek_labels = resolve_rubriek_labels(expression, product_payload)
-                except Exception:
-                    rubriek_labels = []
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            rubriek_labels = self._fetch_rubriek_labels(expression, product_id, env_key)
 
             if labels_only:
                 self._send_json(

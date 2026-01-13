@@ -62,13 +62,14 @@ const RuleDetail = () => {
       if (!expression || !productId) return;
       try {
         setRubriekLabelsLoading(true);
-        const labelsResponse = await fetch(withApiEnv('/api/explain_rule'), {
-          method: 'POST',
+        const labelsUrl = new URL(withApiEnv('/api/explain_rule'), window.location.origin);
+        labelsUrl.searchParams.set('expression', expression);
+        labelsUrl.searchParams.set('productId', productId);
+        labelsUrl.searchParams.set('labelsOnly', 'true');
+        const labelsResponse = await fetch(labelsUrl.toString(), {
           headers: {
-            'Content-Type': 'application/json',
             ...getAuthHeader(),
           },
-          body: JSON.stringify({ expression, productId, labelsOnly: true }),
         });
         if (!labelsResponse.ok) return;
         const labelsData = await labelsResponse.json();
@@ -93,13 +94,14 @@ const RuleDetail = () => {
     try {
       if (productId) {
         try {
-          const labelsResponse = await fetch(withApiEnv('/api/explain_rule'), {
-            method: 'POST',
+          const labelsUrl = new URL(withApiEnv('/api/explain_rule'), window.location.origin);
+          labelsUrl.searchParams.set('expression', expression);
+          labelsUrl.searchParams.set('productId', productId);
+          labelsUrl.searchParams.set('labelsOnly', 'true');
+          const labelsResponse = await fetch(labelsUrl.toString(), {
             headers: {
-              'Content-Type': 'application/json',
               ...getAuthHeader(),
             },
-            body: JSON.stringify({ expression, productId, labelsOnly: true }),
           });
           if (labelsResponse.ok) {
             const labelsData = await labelsResponse.json();
