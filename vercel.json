@@ -6,7 +6,10 @@
       "memory": 1024
     }
   },
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/api/explain-rule", "dest": "/api/explain_rule" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

@@ -62,7 +62,7 @@ const RuleDetail = () => {
       if (!expression || !productId) return;
       try {
         setRubriekLabelsLoading(true);
-        const labelsUrl = new URL(withApiEnv('/api/explain-rule'), window.location.origin);
+        const labelsUrl = new URL(withApiEnv('/api/explain_rule'), window.location.origin);
         labelsUrl.searchParams.set('expression', expression);
         labelsUrl.searchParams.set('productId', productId);
         labelsUrl.searchParams.set('labelsOnly', 'true');
@@ -94,7 +94,7 @@ const RuleDetail = () => {
     try {
       if (productId) {
         try {
-          const labelsUrl = new URL(withApiEnv('/api/explain-rule'), window.location.origin);
+          const labelsUrl = new URL(withApiEnv('/api/explain_rule'), window.location.origin);
           labelsUrl.searchParams.set('expression', expression);
           labelsUrl.searchParams.set('productId', productId);
           labelsUrl.searchParams.set('labelsOnly', 'true');
@@ -112,7 +112,7 @@ const RuleDetail = () => {
         }
       }
 
-      const response = await fetch(withApiEnv('/api/explain-rule'), {
+      const response = await fetch(withApiEnv('/api/explain_rule'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
