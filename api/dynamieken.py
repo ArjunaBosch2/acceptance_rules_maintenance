@@ -106,6 +106,22 @@ def fetch_dynamieken(token, host):
         return {"rules": rules, "count": len(rules)}
 
 
+def fetch_dynamiek_detail(token, host, regel_id):
+    with httpx.Client() as client:
+        response = client.get(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/dynamiekregels/{regel_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        return response.json()
+
+
 def create_dynamiek(token, host, payload):
     with httpx.Client() as client:
         response = client.put(
@@ -124,6 +140,26 @@ def create_dynamiek(token, host, payload):
         if response.content:
             return response.json()
         return {"status": "created"}
+
+
+def update_dynamiek(token, host, payload):
+    with httpx.Client() as client:
+        response = client.put(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/dynamiekregels/wijzigen",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            json=payload,
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "updated"}
 
 
 def delete_dynamiek(token, host, regel_id):
@@ -160,13 +196,22 @@ class handler(BaseHTTPRequestHandler):
                 send_unauthorized(self)
                 return
             parsed = urlparse(self.path)
+            parts = [p for p in parsed.path.split("/") if p]
             query_params = parse_qs(parsed.query or "")
             env_param = query_params.get("env", ["production"])[0]
             env_key = "acceptance" if env_param == "acceptance" else "production"
             config = get_env_config(env_key)
             token = get_bearer_token(env_key)
 
-            data = fetch_dynamieken(token, config["host"])
+            # Check if requesting specific dynamiek: /api/dynamieken/{id}
+            regel_id = None
+            if len(parts) >= 3 and parts[0] == "api" and parts[1] == "dynamieken":
+                regel_id = parts[2] if len(parts) >= 3 else None
+
+            if regel_id:
+                data = fetch_dynamiek_detail(token, config["host"], regel_id)
+            else:
+                data = fetch_dynamieken(token, config["host"])
 
             self._send_json(data, status_code=200)
         except httpx.HTTPStatusError as exc:
@@ -208,6 +253,37 @@ class handler(BaseHTTPRequestHandler):
             token = get_bearer_token(env_key)
 
             data = create_dynamiek(token, config["host"], body)
+            self._send_json(data, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
+                "status_code": exc.response.status_code,
+                "message": exc.response.text,
+            }
+            self._send_json(detail, status_code=exc.response.status_code)
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body"}, status_code=400)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status_code=500)
+
+    def do_PUT(self):
+        try:
+            if not is_authorized(self.headers):
+                send_unauthorized(self)
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length).decode() if content_length else ""
+            body = json.loads(raw_body) if raw_body else {}
+
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+
+            data = update_dynamiek(token, config["host"], body)
             self._send_json(data, status_code=200)
         except httpx.HTTPStatusError as exc:
             detail = {

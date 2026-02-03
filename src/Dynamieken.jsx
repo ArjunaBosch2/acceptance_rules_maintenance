@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { RefreshCw, AlertCircle, Plus, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
 import { getAuthHeader } from './apiAuth';
 
 const Dynamieken = () => {
+  const navigate = useNavigate();
   const [dynamieken, setDynamieken] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -288,14 +290,24 @@ const Dynamieken = () => {
                           {dynamiek.omschrijving || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
-                            onClick={() => handleDeleteClick(dynamiek.regelId)}
-                            disabled={!dynamiek.regelId}
-                            className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors dark:text-red-400 dark:hover:text-red-300"
-                            title="Verwijderen"
-                          >
-                            <X className="w-5 h-5 inline-block" />
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => navigate(`/dynamieken/${dynamiek.regelId}`)}
+                              disabled={!dynamiek.regelId}
+                              className="px-3 py-1 border border-blue-100 text-blue-700 rounded-md hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-900/30 neon-outline text-xs"
+                              title="Bekijk details"
+                            >
+                              Bekijk
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(dynamiek.regelId)}
+                              disabled={!dynamiek.regelId}
+                              className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors dark:text-red-400 dark:hover:text-red-300"
+                              title="Verwijderen"
+                            >
+                              <X className="w-5 h-5 inline-block" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
