@@ -74,6 +74,9 @@ const TopNav = () => {
           <NavLink to="/producten" className={navLinkClasses}>
             Producten
           </NavLink>
+          <NavLink to="/dynamieken" className={navLinkClasses}>
+            Dynamieken
+          </NavLink>
           {hasAuth ? (
             <button
               onClick={handleLogout}
