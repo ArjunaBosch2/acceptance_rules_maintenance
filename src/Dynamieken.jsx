@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, Plus, X } from 'lucide-react';
 import TopNav from './TopNav';
 import { withApiEnv } from './apiEnv';
 import { getAuthHeader } from './apiAuth';
@@ -9,6 +9,11 @@ const Dynamieken = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [jsonInput, setJsonInput] = useState('');
+  const [validationError, setValidationError] = useState('');
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const normalizeDynamieken = (incoming) => {
     if (!incoming) return [];
@@ -78,6 +83,75 @@ const Dynamieken = () => {
     );
   });
 
+  const handleOpenModal = () => {
+    setShowModal(true);
+    setJsonInput('');
+    setValidationError('');
+    setSubmitSuccess(false);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setJsonInput('');
+    setValidationError('');
+    setSubmitSuccess(false);
+  };
+
+  const validateAndSubmit = async () => {
+    setValidationError('');
+    setSubmitSuccess(false);
+
+    try {
+      // Parse JSON
+      const parsed = JSON.parse(jsonInput);
+
+      // Validate required fields
+      if (!parsed.ResourceId) {
+        setValidationError('Veld "ResourceId" is verplicht');
+        return;
+      }
+      if (!parsed.Omschrijving) {
+        setValidationError('Veld "Omschrijving" is verplicht');
+        return;
+      }
+      if (!parsed.Rekenregels) {
+        setValidationError('Veld "Rekenregels" is verplicht');
+        return;
+      }
+
+      // Submit to API
+      setSubmitLoading(true);
+      const res = await fetch(withApiEnv('/api/dynamieken'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify(parsed),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Fout bij toevoegen (status ${res.status})`);
+      }
+
+      setSubmitSuccess(true);
+      setJsonInput('');
+      setTimeout(() => {
+        handleCloseModal();
+        fetchDynamieken();
+      }, 1500);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setValidationError('Ongeldige JSON syntax');
+      } else {
+        setValidationError(err.message);
+      }
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       <TopNav />
@@ -99,6 +173,13 @@ const Dynamieken = () => {
                   placeholder="Zoek op Regel ID of Omschrijving"
                   className="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
                 />
+                <button
+                  onClick={handleOpenModal}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors neon-primary"
+                >
+                  <Plus className="w-4 h-4" />
+                  Toevoegen
+                </button>
                 <button
                   onClick={fetchDynamieken}
                   disabled={loading}
@@ -168,6 +249,74 @@ const Dynamieken = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                Dynamiek Toevoegen
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                JSON Input
+              </label>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">
+                Plak hier de JSON code voor de dynamiek regel. Verplichte velden: ResourceId, Omschrijving, Rekenregels
+              </p>
+              <textarea
+                value={jsonInput}
+                onChange={(e) => setJsonInput(e.target.value)}
+                placeholder={'{\n  "ResourceId": "...",\n  "Omschrijving": "...",\n  "Rekenregels": [...]\n}'}
+                rows={12}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100"
+              />
+
+              {validationError && (
+                <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 dark:bg-red-900/30 dark:border-red-700/60">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5 dark:text-red-400" />
+                  <p className="text-sm text-red-800 dark:text-red-200">{validationError}</p>
+                </div>
+              )}
+
+              {submitSuccess && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg dark:bg-green-900/30 dark:border-green-700/60">
+                  <p className="text-sm text-green-800 dark:text-green-200">✓ Dynamiek succesvol toegevoegd!</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={handleCloseModal}
+                disabled={submitLoading}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={validateAndSubmit}
+                disabled={submitLoading || !jsonInput.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors neon-primary"
+              >
+                {submitLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                Toevoegen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

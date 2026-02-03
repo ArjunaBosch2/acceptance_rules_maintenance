@@ -106,6 +106,26 @@ def fetch_dynamieken(token, host):
         return {"rules": rules, "count": len(rules)}
 
 
+def create_dynamiek(token, host, payload):
+    with httpx.Client() as client:
+        response = client.put(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/dynamiekregels/invoeren",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            json=payload,
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "created"}
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -138,5 +158,47 @@ class handler(BaseHTTPRequestHandler):
                 "message": exc.response.text,
             }
             self._send_json(detail, status_code=exc.response.status_code)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status_code=500)
+
+    def do_POST(self):
+        try:
+            if not is_authorized(self.headers):
+                send_unauthorized(self)
+                return
+
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length).decode() if content_length else ""
+            body = json.loads(raw_body) if raw_body else {}
+
+            # Validate required fields
+            if not body.get("ResourceId"):
+                self._send_json({"error": "ResourceId is required"}, status_code=400)
+                return
+            if not body.get("Omschrijving"):
+                self._send_json({"error": "Omschrijving is required"}, status_code=400)
+                return
+            if not body.get("Rekenregels"):
+                self._send_json({"error": "Rekenregels is required"}, status_code=400)
+                return
+
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+
+            data = create_dynamiek(token, config["host"], body)
+            self._send_json(data, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
+                "status_code": exc.response.status_code,
+                "message": exc.response.text,
+            }
+            self._send_json(detail, status_code=exc.response.status_code)
+        except json.JSONDecodeError:
+            self._send_json({"error": "Invalid JSON body"}, status_code=400)
         except Exception as exc:
             self._send_json({"error": str(exc)}, status_code=500)
