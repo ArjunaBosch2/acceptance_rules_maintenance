@@ -70,6 +70,15 @@ const DynamiekDetail = () => {
       // Parse JSON
       const parsed = JSON.parse(editJson);
 
+      // Generate new GUID for ResourceId
+      const newResourceId = crypto.randomUUID();
+
+      // Create payload with new ResourceId as first field
+      const payload = {
+        ResourceId: newResourceId,
+        ...parsed
+      };
+
       // Submit to API
       setEditLoading(true);
       const res = await fetch(withApiEnv('/api/dynamieken'), {
@@ -78,7 +87,7 @@ const DynamiekDetail = () => {
           'Content-Type': 'application/json',
           ...getAuthHeader(),
         },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
