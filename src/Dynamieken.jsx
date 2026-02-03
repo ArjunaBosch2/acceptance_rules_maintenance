@@ -14,6 +14,10 @@ const Dynamieken = () => {
   const [validationError, setValidationError] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteRegelId, setDeleteRegelId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const normalizeDynamieken = (incoming) => {
     if (!incoming) return [];
@@ -152,6 +156,46 @@ const Dynamieken = () => {
     }
   };
 
+  const handleDeleteClick = (regelId) => {
+    setDeleteRegelId(regelId);
+    setShowDeleteModal(true);
+    setDeleteError('');
+  };
+
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteRegelId(null);
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteRegelId) return;
+
+    setDeleteLoading(true);
+    setDeleteError('');
+
+    try {
+      const res = await fetch(withApiEnv(`/api/dynamieken?regelId=${encodeURIComponent(deleteRegelId)}`), {
+        method: 'DELETE',
+        headers: {
+          ...getAuthHeader(),
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Fout bij verwijderen (status ${res.status})`);
+      }
+
+      handleCloseDeleteModal();
+      fetchDynamieken();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       <TopNav />
@@ -219,12 +263,15 @@ const Dynamieken = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
                       Omschrijving
                     </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider dark:text-slate-300">
+                      Acties
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200 dark:bg-slate-900 dark:divide-slate-800">
                   {filteredDynamieken.length === 0 ? (
                     <tr>
-                      <td colSpan="2" className="px-6 py-8 text-center text-gray-500 dark:text-slate-400">
+                      <td colSpan="3" className="px-6 py-8 text-center text-gray-500 dark:text-slate-400">
                         {error ? 'Fout bij ophalen van dynamieken' : 'Geen dynamieken gevonden'}
                       </td>
                     </tr>
@@ -239,6 +286,16 @@ const Dynamieken = () => {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-700 dark:text-slate-200">
                           {dynamiek.omschrijving || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <button
+                            onClick={() => handleDeleteClick(dynamiek.regelId)}
+                            disabled={!dynamiek.regelId}
+                            className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors dark:text-red-400 dark:hover:text-red-300"
+                            title="Verwijderen"
+                          >
+                            <X className="w-5 h-5 inline-block" />
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -312,6 +369,62 @@ const Dynamieken = () => {
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 )}
                 Toevoegen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
+                Dynamiek Verwijderen
+              </h2>
+              <button
+                onClick={handleCloseDeleteModal}
+                disabled={deleteLoading}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <p className="text-gray-700 dark:text-slate-300">
+                Weet je zeker dat je deze dynamiekregel wilt verwijderen? Dit kan alleen met zelf gedefinieerde dynamiekregels.
+              </p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">
+                Regel ID: <span className="font-mono font-semibold">{deleteRegelId}</span>
+              </p>
+
+              {deleteError && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2 dark:bg-red-900/30 dark:border-red-700/60">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5 dark:text-red-400" />
+                  <p className="text-sm text-red-800 dark:text-red-200">{deleteError}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 dark:border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={handleCloseDeleteModal}
+                disabled={deleteLoading}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              >
+                {deleteLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                Ok
               </button>
             </div>
           </div>

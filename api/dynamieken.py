@@ -126,6 +126,24 @@ def create_dynamiek(token, host, payload):
         return {"status": "created"}
 
 
+def delete_dynamiek(token, host, regel_id):
+    with httpx.Client() as client:
+        response = client.delete(
+            f"{host}/beheer/api/v1/administratie/assurantie/regels/dynamiekregels/{regel_id}",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Accept": "application/json",
+                "Tenant-CustomerId": "30439",
+                "BedrijfId": "1",
+            },
+            timeout=30.0,
+        )
+        response.raise_for_status()
+        if response.content:
+            return response.json()
+        return {"status": "deleted"}
+
+
 class handler(BaseHTTPRequestHandler):
     def _send_json(self, payload, status_code=200):
         body = json.dumps(payload).encode()
@@ -200,5 +218,35 @@ class handler(BaseHTTPRequestHandler):
             self._send_json(detail, status_code=exc.response.status_code)
         except json.JSONDecodeError:
             self._send_json({"error": "Invalid JSON body"}, status_code=400)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, status_code=500)
+
+    def do_DELETE(self):
+        try:
+            if not is_authorized(self.headers):
+                send_unauthorized(self)
+                return
+
+            parsed = urlparse(self.path)
+            query_params = parse_qs(parsed.query or "")
+            env_param = query_params.get("env", ["production"])[0]
+            env_key = "acceptance" if env_param == "acceptance" else "production"
+            config = get_env_config(env_key)
+            token = get_bearer_token(env_key)
+
+            regel_id = query_params.get("regelId", [None])[0]
+            if not regel_id:
+                self._send_json({"error": "regelId is required"}, status_code=400)
+                return
+
+            data = delete_dynamiek(token, config["host"], regel_id)
+            self._send_json(data, status_code=200)
+        except httpx.HTTPStatusError as exc:
+            detail = {
+                "error": "Upstream request failed",
+                "status_code": exc.response.status_code,
+                "message": exc.response.text,
+            }
+            self._send_json(detail, status_code=exc.response.status_code)
         except Exception as exc:
             self._send_json({"error": str(exc)}, status_code=500)
