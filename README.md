@@ -1,45 +1,31 @@
 # Insurance Acceptance Rules
 
-## Running the Test Runner
+## Running the Test Runner (Simple Mode)
 
-### 1) Start Redis
+Simple mode starts tests directly as a background process from the backend.
+No Redis or external worker is required.
 
-```bash
-docker compose up -d redis
-```
-
-### 2) Install backend dependencies
+### 1) Install dependencies
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-### 3) Install worker/test dependencies + Playwright browser
-
-```bash
 python -m pip install -r requirements-worker.txt
 python -m playwright install chromium
 ```
 
-### 4) Start backend API
+### 2) Start backend API
 
 ```bash
 npm run backend:dev
 ```
 
-### 5) Start RQ worker
-
-```bash
-npm run worker
-```
-
-### 6) Start frontend
+### 3) Start frontend
 
 ```bash
 npm run dev
 ```
 
-Frontend runs on Vite, backend is expected on `http://localhost:8000` (already configured in `vite.config.js`).
+Frontend runs on Vite, backend is expected on `http://localhost:8000` (configured in `vite.config.js`).
 
 ### Optional environment variables
 
@@ -54,7 +40,6 @@ $env:TOOLBOX_TEST_PASSWORD="your-password"
 Optional overrides:
 
 ```bash
-$env:REDIS_URL="redis://localhost:6379/0"
 $env:TEST_RUNS_DIR="C:\path\to\runs"
 $env:TOOLBOX_TEST_HEADLESS="1"
 ```
@@ -82,13 +67,8 @@ runs/<run_id>/
   logs.txt
 ```
 
-### Full stack via Docker compose
+## Notes
 
-```bash
-docker compose up --build backend worker redis
-```
-
-## Vercel deployment note
-
-Vercel serverless functions use `requirements.txt` only (lightweight runtime deps).
-The Playwright test worker is intentionally excluded from Vercel runtime dependencies and should run on a separate worker host/container.
+- Concurrency limit is still enforced: max 1 active run (`queued`/`running`) at a time.
+- Vercel serverless is not recommended for this simple mode because background test processes are not reliable in serverless runtime.
+- Recommended deployment for simple mode: one persistent backend host (VM/container).

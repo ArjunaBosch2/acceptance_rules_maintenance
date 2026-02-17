@@ -2,11 +2,10 @@ from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 import json
 import os
+import subprocess
 import sys
 import uuid
 from urllib.parse import parse_qs, unquote, urlparse
-
-from redis.exceptions import ConnectionError as RedisConnectionError
 
 current_dir = os.path.dirname(__file__)
 project_dir = os.path.dirname(current_dir)
@@ -17,28 +16,43 @@ if project_dir not in sys.path:
 
 from _auth import is_authorized, send_unauthorized
 from test_runner.constants import SUPPORTED_SUITES
-from test_runner.jobs import execute_test_run
-from test_runner.queueing import (
-    acquire_active_run_lock,
-    get_active_run_id,
-    get_queue,
-    get_redis_connection,
-    release_active_run_lock,
-)
 from test_runner.storage import (
     artifact_content_type,
+    create_run,
     list_runs,
     read_status,
     resolve_artifact_path,
     run_record,
     tail_logs,
     update_status,
-    create_run,
 )
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _active_run() -> dict | None:
+    for run in list_runs(limit=500):
+        if run.get("status") in {"queued", "running"}:
+            return run
+    return None
+
+
+def _start_background_run(run_id: str, suite: str, base_url: str | None) -> None:
+    command = [sys.executable, "-m", "test_runner.local_runner", run_id, suite]
+    if base_url:
+        command.append(base_url)
+
+    kwargs = {
+        "cwd": project_dir,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if os.name != "nt":
+        kwargs["start_new_session"] = True
+
+    subprocess.Popen(command, **kwargs)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -95,66 +109,30 @@ class handler(BaseHTTPRequestHandler):
             if suite not in SUPPORTED_SUITES:
                 supported = ", ".join(sorted(SUPPORTED_SUITES))
                 self._send_json(
-                    {
-                        "error": f"Unsupported suite '{suite}'. Supported suites: {supported}",
-                    },
+                    {"error": f"Unsupported suite '{suite}'. Supported suites: {supported}"},
                     status_code=400,
                 )
                 return
 
-            redis_conn = get_redis_connection()
-            locked_run_id = get_active_run_id(redis_conn)
-            if locked_run_id:
-                locked_status = read_status(locked_run_id).get("status")
-                if locked_status in {"queued", "running"}:
-                    self._send_json(
-                        {
-                            "error": "A test run is already active",
-                            "message": f"Run {locked_run_id} is currently {locked_status}",
-                            "active_run_id": locked_run_id,
-                        },
-                        status_code=409,
-                    )
-                    return
-                release_active_run_lock(locked_run_id, redis_conn)
-
-            run_id = str(uuid.uuid4())
-            if not acquire_active_run_lock(run_id, redis_conn):
+            active = _active_run()
+            if active:
                 self._send_json(
                     {
                         "error": "A test run is already active",
-                        "message": "Could not acquire run lock",
+                        "message": f"Run {active['run_id']} is currently {active['status']}",
+                        "active_run_id": active["run_id"],
                     },
                     status_code=409,
                 )
                 return
 
+            run_id = str(uuid.uuid4())
             create_run(run_id=run_id, suite=suite, base_url=base_url)
-            queue = get_queue(redis_conn)
-            queue.enqueue(
-                execute_test_run,
-                run_id,
-                suite,
-                base_url,
-                job_timeout=45 * 60,
-                result_ttl=24 * 60 * 60,
-            )
+            _start_background_run(run_id, suite, base_url)
 
             self._send_json({"run_id": run_id, "status": "queued"}, status_code=200)
         except json.JSONDecodeError:
             self._send_json({"error": "Invalid JSON body"}, status_code=400)
-        except RedisConnectionError as exc:
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-            self._send_json(
-                {
-                    "error": f"Redis connection failed: {exc}",
-                    "message": (
-                        "Cannot reach Redis. Configure REDIS_URL for your deployed environment. "
-                        f"Current REDIS_URL={redis_url}"
-                    ),
-                },
-                status_code=503,
-            )
         except Exception as exc:
             run_id = locals().get("run_id")
             if run_id:
@@ -162,18 +140,9 @@ class handler(BaseHTTPRequestHandler):
                     run_id,
                     status="failed",
                     finished_at=_utc_now_iso(),
-                    message=f"Failed to enqueue run: {exc}",
+                    message=f"Failed to start run: {exc}",
                 )
-                try:
-                    release_active_run_lock(run_id)
-                except Exception:
-                    pass
-            self._send_json(
-                {
-                    "error": str(exc),
-                },
-                status_code=500,
-            )
+            self._send_json({"error": str(exc)}, status_code=500)
 
     def do_GET(self):
         try:
@@ -227,17 +196,5 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, status_code=404)
         except ValueError as exc:
             self._send_json({"error": str(exc)}, status_code=400)
-        except RedisConnectionError as exc:
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-            self._send_json(
-                {
-                    "error": f"Redis connection failed: {exc}",
-                    "message": (
-                        "Cannot reach Redis. Configure REDIS_URL for your deployed environment. "
-                        f"Current REDIS_URL={redis_url}"
-                    ),
-                },
-                status_code=503,
-            )
         except Exception as exc:
             self._send_json({"error": str(exc)}, status_code=500)
