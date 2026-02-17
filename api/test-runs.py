@@ -6,6 +6,8 @@ import sys
 import uuid
 from urllib.parse import parse_qs, unquote, urlparse
 
+from redis.exceptions import ConnectionError as RedisConnectionError
+
 current_dir = os.path.dirname(__file__)
 project_dir = os.path.dirname(current_dir)
 if current_dir not in sys.path:
@@ -141,6 +143,18 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"run_id": run_id, "status": "queued"}, status_code=200)
         except json.JSONDecodeError:
             self._send_json({"error": "Invalid JSON body"}, status_code=400)
+        except RedisConnectionError as exc:
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            self._send_json(
+                {
+                    "error": f"Redis connection failed: {exc}",
+                    "message": (
+                        "Cannot reach Redis. Configure REDIS_URL for your deployed environment. "
+                        f"Current REDIS_URL={redis_url}"
+                    ),
+                },
+                status_code=503,
+            )
         except Exception as exc:
             run_id = locals().get("run_id")
             if run_id:
@@ -213,5 +227,17 @@ class handler(BaseHTTPRequestHandler):
             self._send_json({"error": str(exc)}, status_code=404)
         except ValueError as exc:
             self._send_json({"error": str(exc)}, status_code=400)
+        except RedisConnectionError as exc:
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            self._send_json(
+                {
+                    "error": f"Redis connection failed: {exc}",
+                    "message": (
+                        "Cannot reach Redis. Configure REDIS_URL for your deployed environment. "
+                        f"Current REDIS_URL={redis_url}"
+                    ),
+                },
+                status_code=503,
+            )
         except Exception as exc:
             self._send_json({"error": str(exc)}, status_code=500)
