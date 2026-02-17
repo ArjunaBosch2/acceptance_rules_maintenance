@@ -1,6 +1,7 @@
 import json
 import mimetypes
 import os
+import tempfile
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +19,11 @@ def runs_root() -> Path:
     if configured:
         root = Path(configured).expanduser().resolve()
     else:
-        root = (project_root() / "runs").resolve()
+        # Vercel/serverless file systems are read-only except temp dirs.
+        if os.getenv("VERCEL") == "1":
+            root = Path(tempfile.gettempdir()).resolve() / "runs"
+        else:
+            root = (project_root() / "runs").resolve()
     root.mkdir(parents=True, exist_ok=True)
     return root
 
