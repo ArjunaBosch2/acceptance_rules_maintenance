@@ -4,6 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "frontend:dev": "vite",
+    "backend:dev": "npx vercel dev --listen 8000 --yes",
+    "worker": "python -m test_runner.worker",
+    "test:runner:install": "python -m playwright install chromium",
     "build": "vite build",
     "preview": "vite preview"
   },

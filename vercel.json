@@ -12,6 +12,7 @@
   },
   "rewrites": [
     { "source": "/api/dynamieken/:id", "destination": "/api/dynamieken" },
+    { "source": "/api/test-runs/:path*", "destination": "/api/test-runs" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

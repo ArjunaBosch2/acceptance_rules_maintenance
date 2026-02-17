@@ -7,6 +7,7 @@ import Products from './Products';
 import ProductRules from './ProductRules';
 import Dynamieken from './Dynamieken';
 import DynamiekDetail from './DynamiekDetail';
+import Testen from './Testen';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -14,6 +15,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
+        <Route path="/testen" element={<Testen />} />
         <Route path="/producten" element={<Products />} />
         <Route path="/producten/:productId/regels" element={<ProductRules />} />
         <Route path="/dynamieken" element={<Dynamieken />} />

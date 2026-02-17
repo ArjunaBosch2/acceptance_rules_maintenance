@@ -68,6 +68,9 @@ const TopNav = () => {
               <option value="acceptance">Acceptatie</option>
             </select>
           </div>
+          <NavLink to="/testen" className={navLinkClasses}>
+            Testen
+          </NavLink>
           <NavLink to="/" className={navLinkClasses} end>
             Acceptatieregels
           </NavLink>
