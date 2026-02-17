@@ -3,11 +3,11 @@
   "functions": {
     "api/explain-rule.py": {
       "maxDuration": 30,
-      "memory": 1024
+      "excludeFiles": "{venv/**,node_modules/**,dist/**,runs/**,tmpclaude-*}"
     },
     "api/**/*.py": {
       "maxDuration": 10,
-      "memory": 1024
+      "excludeFiles": "{venv/**,node_modules/**,dist/**,runs/**,tmpclaude-*,test_runner/tests/**}"
     }
   },
   "rewrites": [

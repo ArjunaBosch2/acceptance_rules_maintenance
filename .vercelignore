@@ -1,0 +1,13 @@
+venv/
+node_modules/
+dist/
+.pytest_cache/
+.rq/
+runs/
+__pycache__/
+*.pyc
+tmpclaude-*
+test_runner/tests/
+Dockerfile.backend
+Dockerfile.worker
+docker-compose.yml

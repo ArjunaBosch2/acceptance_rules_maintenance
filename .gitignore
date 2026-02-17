@@ -1,9 +1,11 @@
 node_modules/
 dist/
 __pycache__/
+*.pyc
 .pytest_cache/
 .rq/
 runs/
 venv/
 .vercel
 .env*.local
+tmpclaude-*

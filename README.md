@@ -8,26 +8,32 @@
 docker compose up -d redis
 ```
 
-### 2) Install Python dependencies + Playwright browser
+### 2) Install backend dependencies
 
 ```bash
 python -m pip install -r requirements.txt
+```
+
+### 3) Install worker/test dependencies + Playwright browser
+
+```bash
+python -m pip install -r requirements-worker.txt
 python -m playwright install chromium
 ```
 
-### 3) Start backend API
+### 4) Start backend API
 
 ```bash
 npm run backend:dev
 ```
 
-### 4) Start RQ worker
+### 5) Start RQ worker
 
 ```bash
 npm run worker
 ```
 
-### 5) Start frontend
+### 6) Start frontend
 
 ```bash
 npm run dev
@@ -81,3 +87,8 @@ runs/<run_id>/
 ```bash
 docker compose up --build backend worker redis
 ```
+
+## Vercel deployment note
+
+Vercel serverless functions use `requirements.txt` only (lightweight runtime deps).
+The Playwright test worker is intentionally excluded from Vercel runtime dependencies and should run on a separate worker host/container.
